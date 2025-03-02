@@ -2,7 +2,7 @@
 package repository
 
 import (
-	"sportbetsim/internal/models"
+	"gosveltekit/internal/models"
 
 	"gorm.io/gorm"
 )

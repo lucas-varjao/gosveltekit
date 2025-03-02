@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"sportbetsim/internal/config"
+	"gosveltekit/internal/config"
 
 	"github.com/golang-jwt/jwt/v5"
 )

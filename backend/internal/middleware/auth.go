@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"sportbetsim/internal/auth"
+	"gosveltekit/internal/auth"
 
 	"github.com/gin-gonic/gin"
 )

@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"sportbetsim/internal/config"
+	"gosveltekit/internal/config"
 	"testing"
 	"time"
 

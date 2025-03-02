@@ -4,7 +4,7 @@ package handlers
 import (
 	"net/http"
 
-	"sportbetsim/internal/service"
+	"gosveltekit/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

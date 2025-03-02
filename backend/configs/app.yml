@@ -1,9 +1,9 @@
 server:
-  port: 8080
+    port: 8080
 database:
-  dsn: 'sportbetsim.db'
+    dsn: 'gosveltekit.db'
 jwt:
-  secret_key: 'G%bv7sK4w@vkRjUs#uP2DbB5dFwsnpMYDX92gKb4' # Em produção, use variáveis de ambiente
-  access_token_ttl: 15m
-  refresh_token_ttl: 168h # 7 dias
-  issuer: 'sportbetsim'
+    secret_key: 'G%bv7sK4w@vkRjUs#uP2DbB5dFwsnpMYDX92gKb4' # Em produção, use variáveis de ambiente
+    access_token_ttl: 15m
+    refresh_token_ttl: 168h # 7 dias
+    issuer: 'gosveltekit'

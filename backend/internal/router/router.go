@@ -2,10 +2,10 @@
 package router
 
 import (
+	"gosveltekit/internal/auth"
+	"gosveltekit/internal/handlers"
+	"gosveltekit/internal/middleware"
 	"net/http"
-	"sportbetsim/internal/auth"
-	"sportbetsim/internal/handlers"
-	"sportbetsim/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )

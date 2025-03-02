@@ -5,10 +5,11 @@ import (
 	"errors"
 	"time"
 
+	"gosveltekit/internal/auth"
+	"gosveltekit/internal/models"
+	"gosveltekit/internal/repository"
+
 	"golang.org/x/crypto/bcrypt"
-	"sportbetsim/internal/auth"
-	"sportbetsim/internal/models"
-	"sportbetsim/internal/repository"
 )
 
 var (

@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
+	"gosveltekit/internal/auth"
+	"gosveltekit/internal/config"
+	"gosveltekit/internal/handlers"
+	"gosveltekit/internal/models"
+	"gosveltekit/internal/repository"
+	"gosveltekit/internal/router"
+	"gosveltekit/internal/service"
 	"log"
-	"sportbetsim/internal/auth"
-	"sportbetsim/internal/config"
-	"sportbetsim/internal/handlers"
-	"sportbetsim/internal/models"
-	"sportbetsim/internal/repository"
-	"sportbetsim/internal/router"
-	"sportbetsim/internal/service"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite" // Alterado de postgres para sqlite
