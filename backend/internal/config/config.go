@@ -16,10 +16,11 @@ type DatabaseConfig struct {
 }
 
 type JWTConfig struct {
-	SecretKey       string        `mapstructure:"secret-key"`
-	AccessTokenTTL  time.Duration `mapstructure:"access_token_ttl"`
-	RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
-	Issuer          string        `mapstructure:"issuer"`
+	SecretKey        string        `mapstructure:"secret-key"`
+	AccessTokenTTL   time.Duration `mapstructure:"access_token_ttl"`
+	RefreshTokenTTL  time.Duration `mapstructure:"refresh_token_ttl"`
+	PasswordResetTTL time.Duration `mapstructure:"password_reset_ttl"`
+	Issuer           string        `mapstructure:"issuer"`
 }
 
 type Config struct {

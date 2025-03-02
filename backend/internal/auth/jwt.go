@@ -97,3 +97,30 @@ func (ts *TokenService) ValidateToken(tokenString string) (*Claims, error) {
 
 	return nil, ErrInvalidToken
 }
+
+// GeneratePasswordResetToken creates a token for password reset
+func (ts *TokenService) GeneratePasswordResetToken(userID uint) (string, time.Time, error) {
+	expiresAt := time.Now().Add(ts.config.JWT.PasswordResetTTL)
+
+	claims := &Claims{
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    ts.config.JWT.Issuer,
+			Subject:   fmt.Sprintf("%d", userID),
+			// Adding a special purpose for the token
+			ID: "password-reset",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, err := token.SignedString([]byte(ts.config.JWT.SecretKey))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	return tokenString, expiresAt, nil
+}

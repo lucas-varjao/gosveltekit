@@ -29,6 +29,8 @@ type User struct {
 	Permissions string `gorm:"type:text"` // JSON string of permissions
 
 	// Authentication
-	RefreshToken string
-	TokenExpiry  time.Time
+	RefreshToken     string
+	TokenExpiry      time.Time
+	ResetToken       string
+	ResetTokenExpiry time.Time
 }

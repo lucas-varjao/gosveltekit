@@ -15,6 +15,8 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("credenciais inválidas")
 	ErrUserNotActive      = errors.New("usuário inativo")
+	ErrInvalidToken       = errors.New("token inválido")
+	ErrExpiredToken       = errors.New("token expirado")
 )
 
 type AuthService struct {
@@ -108,16 +110,16 @@ func (s *AuthService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 
 	// Gerar novo refresh token apenas se estiver próximo da expiração
 	var newRefreshToken string
-	refreshExpiresAt := user.TokenExpiry
 
 	if time.Until(user.TokenExpiry) < 24*time.Hour {
-		newRefreshToken, refreshExpiresAt, err = s.tokenService.GenerateRefreshToken()
+		var tokenExpiry time.Time
+		newRefreshToken, tokenExpiry, err = s.tokenService.GenerateRefreshToken()
 		if err != nil {
 			return nil, err
 		}
 
 		user.RefreshToken = newRefreshToken
-		user.TokenExpiry = refreshExpiresAt
+		user.TokenExpiry = tokenExpiry
 
 		if err := s.userRepo.Update(user); err != nil {
 			return nil, err
@@ -146,6 +148,58 @@ func (s *AuthService) Logout(userID uint) error {
 
 	user.RefreshToken = ""
 	user.TokenExpiry = time.Time{}
+
+	return s.userRepo.Update(user)
+}
+
+func (s *AuthService) RequestPasswordReset(email string) error {
+	user, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		// Não informamos se o email existe ou não por segurança
+		return nil
+	}
+
+	// Gerar token de recuperação (válido por 1 hora)
+	resetToken, expiresAt, err := s.tokenService.GeneratePasswordResetToken(user.ID)
+	if err != nil {
+		return err
+	}
+
+	// Armazenar token no usuário
+	user.ResetToken = resetToken
+	user.ResetTokenExpiry = expiresAt
+	if err := s.userRepo.Update(user); err != nil {
+		return err
+	}
+
+	// Enviar email com link de recuperação
+	// resetLink := fmt.Sprintf("https://seu-app.com/reset-password?token=%s", resetToken)
+	// emailService.SendPasswordResetEmail(user.Email, resetLink)
+
+	return nil
+}
+
+func (s *AuthService) ResetPassword(resetToken, newPassword string) error {
+	user, err := s.userRepo.FindByResetToken(resetToken)
+	if err != nil {
+		return ErrInvalidToken
+	}
+
+	// Verificar se o token ainda é válido
+	if time.Now().After(user.ResetTokenExpiry) {
+		return ErrExpiredToken
+	}
+
+	// Hash da nova senha
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	// Atualizar senha e limpar tokens
+	user.PasswordHash = string(hashedPassword)
+	user.ResetToken = ""
+	user.ResetTokenExpiry = time.Time{}
 
 	return s.userRepo.Update(user)
 }
