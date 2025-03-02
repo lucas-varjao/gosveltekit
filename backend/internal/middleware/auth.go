@@ -10,6 +10,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AuthMiddleware creates a Gin middleware for JWT authentication.
+//
+// It validates the Authorization header containing a JWT token and extracts
+// user information from the token claims. The middleware expects the header
+// format "Bearer {token}". If validation succeeds, it adds the user ID and role
+// to the request context for use by subsequent request handlers.
+//
+// Parameters:
+//   - tokenService: A pointer to auth.TokenService used to validate tokens
+//
+// Returns:
+//   - gin.HandlerFunc: A middleware function that can be used with Gin router
+//
+// Authentication failures result in:
+//   - 401 Unauthorized: When header is missing or malformed
+//   - 401 Unauthorized: When token is invalid or expired (with specific error messages)
 func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		authHeader := context.GetHeader("Authorization")
@@ -47,6 +63,24 @@ func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {
 }
 
 // Middleware opcional para verificar roles
+// RoleMiddleware creates a new Gin middleware to verify that the current user's role
+// matches at least one of the required roles. This middleware expects the user's role
+// to be already set in the Gin context with the key "role" (typically by a previous
+// authentication middleware).
+//
+// Parameters:
+//   - roles: A variadic list of role names that are allowed to access the protected route.
+//
+// Returns:
+//   - A Gin middleware function that:
+//   - Returns 401 Unauthorized if no role is found in the context
+//   - Returns 403 Forbidden if the user's role doesn't match any of the required roles
+//   - Calls context.Next() if the user's role matches any of the required roles
+//
+// Usage example:
+//
+//	router.GET("/admin", RoleMiddleware("admin"), adminHandler)
+//	router.GET("/api", RoleMiddleware("admin", "user"), apiHandler)
 func RoleMiddleware(roles ...string) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		userRole, exists := context.Get("role")
