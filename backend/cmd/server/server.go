@@ -33,14 +33,14 @@ func main() {
 	// db.Migrator().DropTable(&models.User{})
 
 	// Migrar tabelas
-	db.AutoMigrate(&models.User{}, &models.Match{}, &models.Bet{})
+	db.AutoMigrate(&models.User{})
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	result := db.Where(models.User{Username: "admin"}).FirstOrCreate(&models.User{Username: "admin", Email: "admin@example.com", DisplayName: "Administrator", PasswordHash: string(passwordHash), Coins: 999999, Role: "admin"})
+	result := db.Where(models.User{Username: "admin"}).FirstOrCreate(&models.User{Username: "admin", Email: "admin@example.com", DisplayName: "Administrator", PasswordHash: string(passwordHash), Role: "admin"})
 	if result.Error != nil {
 		fmt.Println(result.Error)
 	}
