@@ -6,8 +6,10 @@ import (
 	"gosveltekit/internal/handlers"
 	"gosveltekit/internal/middleware"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/time/rate"
 )
 
 func SetupRouter(
@@ -36,15 +38,21 @@ func SetupRouter(
 		})
 	})
 
+	authLimiter := middleware.NewIPRateLimiter(rate.Limit(1), 3, time.Hour)
+
 	// Rotas públicas
 	auth := r.Group("/auth")
+	auth.Use(middleware.RateLimitMiddleware(authLimiter))
 	{
 		auth.POST("/login", authHandler.Login)
 		auth.POST("/refresh", authHandler.RefreshToken)
 	}
 
+	apiLimiter := middleware.NewIPRateLimiter(rate.Limit(10), 20, time.Hour)
+
 	// Rotas protegidas
 	api := r.Group("/api")
+	api.Use(middleware.RateLimitMiddleware(apiLimiter))
 	api.Use(middleware.AuthMiddleware(tokenService))
 	{
 		api.POST("/logout", authHandler.Logout)
