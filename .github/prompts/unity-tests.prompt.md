@@ -5,3 +5,4 @@
 3. Test edge cases and boundary values
 4. Follow Go testing best practices
 5. Use the Go standard library whenever possible, avoiding third-party testing packages unless absolutely necessary
+6. Use only the `testing` package from the Go standard library. Do not use any third-party assertion libraries like `testify`.

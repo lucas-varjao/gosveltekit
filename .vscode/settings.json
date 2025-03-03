@@ -1,0 +1,7 @@
+{
+  "github.copilot.chat.testGeneration.instructions": [
+    {
+      "text": "Use only the `testing` package from the Go standard library. Do not use any third-party assertion libraries like `testify`."
+    }
+  ]
+}

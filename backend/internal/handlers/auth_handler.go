@@ -11,10 +11,10 @@ import (
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
+	authService service.AuthServiceInterface
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(authService service.AuthServiceInterface) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
@@ -179,6 +179,10 @@ func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 	}
 
 	if err := h.authService.RequestPasswordReset(req.Email); err != nil {
+		if err.Error() == "invalid email format" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		// Don't reveal if email exists for security reasons
 		c.JSON(http.StatusOK, gin.H{"message": "se o email existir, um link de recuperação será enviado"})
 		return

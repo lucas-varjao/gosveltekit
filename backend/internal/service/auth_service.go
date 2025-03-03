@@ -21,6 +21,16 @@ var (
 	ErrExpiredToken       = errors.New("token expirado")
 )
 
+// AuthServiceInterface defines the methods that an auth service must implement
+type AuthServiceInterface interface {
+	Login(username, password, ip, userAgent string) (*LoginResponse, error)
+	RefreshToken(refreshToken string) (*LoginResponse, error)
+	Logout(userID uint, accessToken string) error
+	Register(username, email, password, displayName string) (*models.User, error)
+	RequestPasswordReset(email string) error
+	ResetPassword(token, newPassword string) error
+}
+
 type AuthService struct {
 	userRepo            *repository.UserRepository
 	tokenService        *auth.TokenService
