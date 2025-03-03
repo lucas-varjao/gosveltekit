@@ -55,6 +55,16 @@ func (r *UserRepository) FindByRefreshToken(token string) (*models.User, error) 
 	return &user, nil
 }
 
+// FindUsersWithResetTokens finds all users that currently have reset tokens
+func (r *UserRepository) FindUsersWithResetTokens() ([]*models.User, error) {
+	var users []*models.User
+	// Find all users where reset_token is not empty
+	if err := r.db.Where("reset_token <> ''").Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (r *UserRepository) Create(user *models.User) error {
 	return r.db.Create(user).Error
 }

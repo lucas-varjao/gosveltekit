@@ -3,7 +3,9 @@ package auth
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -105,9 +107,24 @@ func (ts *TokenService) ValidateToken(tokenString string) (*Claims, error) {
 }
 
 // GeneratePasswordResetToken creates a token for password reset
-func (ts *TokenService) GeneratePasswordResetToken(userID uint) (string, time.Time, error) {
+// Now returns both the plaintext token (for the email link) and the hashed token (for storage)
+func (ts *TokenService) GeneratePasswordResetToken(userID uint) (string, string, time.Time, error) {
 	expiresAt := time.Now().Add(ts.config.JWT.PasswordResetTTL)
 
+	// Generate a secure random token
+	randomBytes := make([]byte, 32)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return "", "", time.Time{}, err
+	}
+
+	// Create the plaintext token to be sent to the user
+	plaintextToken := base64.URLEncoding.EncodeToString(randomBytes)
+
+	// Create a hash of the token to store in the database
+	hashedToken := hashToken(plaintextToken)
+
+	// Create JWT claims for additional security (optional but keeps consistency)
 	claims := &Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -121,14 +138,29 @@ func (ts *TokenService) GeneratePasswordResetToken(userID uint) (string, time.Ti
 		},
 	}
 
+	// Sign the token with our secret
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
 	tokenString, err := token.SignedString([]byte(ts.config.JWT.SecretKey))
 	if err != nil {
-		return "", time.Time{}, err
+		return "", "", time.Time{}, err
 	}
 
-	return tokenString, expiresAt, nil
+	// For password reset, we return the plaintext token for the email link
+	// and the hashed version for storage
+	return plaintextToken + "." + tokenString, hashedToken, expiresAt, nil
+}
+
+// hashToken creates a SHA-256 hash of the token
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
+}
+
+// VerifyPasswordResetToken verifies if a password reset token is valid
+func (ts *TokenService) VerifyPasswordResetToken(plaintextToken, hashedTokenFromDB string) bool {
+	// Hash the plaintext token and compare with the stored hash
+	computedHash := hashToken(plaintextToken)
+	return computedHash == hashedTokenFromDB
 }
 
 func (ts *TokenService) BlacklistToken(tokenString string) error {

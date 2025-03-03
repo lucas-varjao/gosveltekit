@@ -3,6 +3,7 @@ package service
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,8 +30,9 @@ type AuthService struct {
 
 func NewAuthService(userRepo *repository.UserRepository, tokenService *auth.TokenService) *AuthService {
 	return &AuthService{
-		userRepo:     userRepo,
-		tokenService: tokenService,
+		userRepo:            userRepo,
+		tokenService:        tokenService,
+		failedLoginAttempts: make(map[string]int),
 	}
 }
 
@@ -185,34 +187,75 @@ func (s *AuthService) RequestPasswordReset(email string) error {
 		return nil
 	}
 
+	// Explicitly invalidate any existing reset tokens for this user first
+	// by setting it to an empty string and resetting the expiry
+	if user.ResetToken != "" {
+		user.ResetToken = ""
+		user.ResetTokenExpiry = time.Time{}
+		if err := s.userRepo.Update(user); err != nil {
+			return err
+		}
+	}
+
 	// Gerar token de recuperação (válido por 1 hora)
-	resetToken, expiresAt, err := s.tokenService.GeneratePasswordResetToken(user.ID)
+	// Now using the enhanced token generation that returns both plaintext and hashed tokens
+	plaintextToken, hashedToken, expiresAt, err := s.tokenService.GeneratePasswordResetToken(user.ID)
 	if err != nil {
 		return err
 	}
 
-	// Armazenar token no usuário
-	user.ResetToken = resetToken
+	// Armazenar token HASH no usuário (não o token original)
+	user.ResetToken = hashedToken
 	user.ResetTokenExpiry = expiresAt
 	if err := s.userRepo.Update(user); err != nil {
 		return err
 	}
 
 	// Enviar email com link de recuperação
-	// resetLink := fmt.Sprintf("https://seu-app.com/reset-password?token=%s", resetToken)
+	// O token plaintext é usado para o link de recuperação
+	// Temporarily log the token for development purposes
+	_ = plaintextToken // TODO: Implement email service to send reset link
+	// resetLink := fmt.Sprintf("https://seu-app.com/reset-password?token=%s", plaintextToken)
 	// emailService.SendPasswordResetEmail(user.Email, resetLink)
 
 	return nil
 }
 
-func (s *AuthService) ResetPassword(resetToken, newPassword string) error {
-	user, err := s.userRepo.FindByResetToken(resetToken)
+func (s *AuthService) ResetPassword(tokenFromUser, newPassword string) error {
+	// Split the token to get the plaintext part
+	parts := strings.SplitN(tokenFromUser, ".", 2)
+	if len(parts) != 2 {
+		return ErrInvalidToken
+	}
+	plaintextToken := parts[0]
+
+	// Find all users with non-expired reset tokens
+	users, err := s.userRepo.FindUsersWithResetTokens()
 	if err != nil {
+		return err
+	}
+
+	// Find the user with the matching hashed token
+	var matchedUser *models.User
+	for _, user := range users {
+		// Verify if current time is before token expiry
+		if time.Now().After(user.ResetTokenExpiry) {
+			continue // Skip expired tokens
+		}
+
+		// Check if the plaintext token hash matches the stored hash
+		if s.tokenService.VerifyPasswordResetToken(plaintextToken, user.ResetToken) {
+			matchedUser = user
+			break
+		}
+	}
+
+	if matchedUser == nil {
 		return ErrInvalidToken
 	}
 
 	// Verificar se o token ainda é válido
-	if time.Now().After(user.ResetTokenExpiry) {
+	if time.Now().After(matchedUser.ResetTokenExpiry) {
 		return ErrExpiredToken
 	}
 
@@ -223,11 +266,11 @@ func (s *AuthService) ResetPassword(resetToken, newPassword string) error {
 	}
 
 	// Atualizar senha e limpar tokens
-	user.PasswordHash = string(hashedPassword)
-	user.ResetToken = ""
-	user.ResetTokenExpiry = time.Time{}
+	matchedUser.PasswordHash = string(hashedPassword)
+	matchedUser.ResetToken = ""
+	matchedUser.ResetTokenExpiry = time.Time{}
 
-	return s.userRepo.Update(user)
+	return s.userRepo.Update(matchedUser)
 }
 
 func (s *AuthService) incrementFailedLoginAttempt(username string) {
