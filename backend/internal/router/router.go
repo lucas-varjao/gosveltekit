@@ -38,16 +38,21 @@ func SetupRouter(
 		})
 	})
 
+	// Limiter mais restritivo para rotas de autenticação (prevenção de força bruta)
 	authLimiter := middleware.NewIPRateLimiter(rate.Limit(1), 3, time.Hour)
 
-	// Rotas públicas
+	// Rotas públicas de autenticação
 	auth := r.Group("/auth")
 	auth.Use(middleware.RateLimitMiddleware(authLimiter))
 	{
 		auth.POST("/login", authHandler.Login)
 		auth.POST("/refresh", authHandler.RefreshToken)
+		auth.POST("/register", authHandler.Register)
+		auth.POST("/password-reset-request", authHandler.RequestPasswordReset)
+		auth.POST("/password-reset", authHandler.ResetPassword)
 	}
 
+	// Limiter para API normal (mais permissivo)
 	apiLimiter := middleware.NewIPRateLimiter(rate.Limit(10), 20, time.Hour)
 
 	// Rotas protegidas

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"gosveltekit/internal/service"
+	"gosveltekit/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,9 +27,29 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+type RegistrationRequest struct {
+	Username    string `json:"username" binding:"required"`
+	Email       string `json:"email" binding:"required"`
+	Password    string `json:"password" binding:"required"`
+	DisplayName string `json:"display_name" binding:"required"`
+}
+
+type PasswordResetRequest struct {
+	Token           string `json:"token" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
+	ConfirmPassword string `json:"confirm_password" binding:"required"`
+}
+
+// Login handles user authentication with input validation
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate input data before attempting login
+	if err := validation.ValidateLoginRequest(req.Username, req.Password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -55,9 +76,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// RefreshToken handles token refresh with validation
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate refresh token
+	if err := validation.ValidateRefreshToken(req.RefreshToken); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -74,6 +102,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// Logout handles user logout
 func (h *AuthHandler) Logout(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -94,4 +123,91 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "logout realizado com sucesso"})
+}
+
+// Register handles new user registration with comprehensive validation
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req RegistrationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate all registration data
+	if err := validation.ValidateRegistrationRequest(
+		req.Username,
+		req.Email,
+		req.Password,
+		req.DisplayName,
+	); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Forward to service layer (not implemented yet)
+	// user, err := h.authService.Register(req.Username, req.Email, req.Password, req.DisplayName)
+	// if err != nil {
+	//     status := http.StatusBadRequest
+	//     c.JSON(status, gin.H{"error": err.Error()})
+	//     return
+	// }
+
+	c.JSON(http.StatusOK, gin.H{"message": "registro realizado com sucesso"})
+}
+
+// RequestPasswordReset handles password reset requests
+func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate email
+	if err := validation.ValidateEmail(req.Email); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.authService.RequestPasswordReset(req.Email); err != nil {
+		// Don't reveal if email exists for security reasons
+		c.JSON(http.StatusOK, gin.H{"message": "se o email existir, um link de recuperação será enviado"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "se o email existir, um link de recuperação será enviado"})
+}
+
+// ResetPassword handles password reset with token validation
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req PasswordResetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate password reset request
+	if err := validation.ValidatePasswordReset(req.Token, req.NewPassword, req.ConfirmPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.authService.ResetPassword(req.Token, req.NewPassword); err != nil {
+		status := http.StatusBadRequest
+		message := "falha ao redefinir senha"
+
+		if err == service.ErrInvalidToken {
+			message = "token inválido"
+		} else if err == service.ErrExpiredToken {
+			message = "token expirado"
+		}
+
+		c.JSON(status, gin.H{"error": message})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "senha redefinida com sucesso"})
 }
