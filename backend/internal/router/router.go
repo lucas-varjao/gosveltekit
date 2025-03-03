@@ -15,7 +15,6 @@ import (
 func SetupRouter(
 	authHandler *handlers.AuthHandler,
 	tokenService *auth.TokenService,
-	// outros handlers...
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -60,22 +59,25 @@ func SetupRouter(
 	api.Use(middleware.RateLimitMiddleware(apiLimiter))
 	api.Use(middleware.AuthMiddleware(tokenService))
 	{
+		// Rota de teste protegida
+		api.GET("/protected", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "Esta é uma rota protegida",
+			})
+		})
+
 		api.POST("/logout", authHandler.Logout)
 
 		// Rotas apenas para admin
 		admin := api.Group("/admin")
 		admin.Use(middleware.RoleMiddleware("admin"))
 		{
-			// Rotas de admin aqui
 			admin.GET("/dashboard", func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{
 					"message": "Admin Dashboard",
 				})
 			})
 		}
-
-		// Outras rotas protegidas
-		// ...
 	}
 
 	return r
