@@ -41,7 +41,8 @@ func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := tokenService.ValidateToken(parts[1])
+		tokenString := parts[1]
+		claims, err := tokenService.ValidateToken(tokenString)
 		if err != nil {
 			status := http.StatusUnauthorized
 			message := "token inválido"
@@ -57,6 +58,7 @@ func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {
 		// Armazena os claims no contexto para uso posterior
 		context.Set("userID", claims.UserID)
 		context.Set("role", claims.Role)
+		context.Set("accessToken", tokenString)
 
 		context.Next()
 	}

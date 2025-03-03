@@ -33,13 +33,19 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	response, err := h.authService.Login(req.Username, req.Password)
+	// Get client IP and user agent
+	ip := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	response, err := h.authService.Login(req.Username, req.Password, ip, userAgent)
 	if err != nil {
 		status := http.StatusUnauthorized
 		message := "credenciais inválidas"
 
 		if err == service.ErrUserNotActive {
 			message = "usuário inativo"
+		} else if err.Error() == "conta temporariamente bloqueada, tente novamente mais tarde" {
+			message = err.Error()
 		}
 
 		c.JSON(status, gin.H{"error": message})
@@ -75,7 +81,14 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.Logout(userID.(uint)); err != nil {
+	// Obtém o token atual do contexto
+	accessToken, exists := c.Get("accessToken")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "token não encontrado"})
+		return
+	}
+
+	if err := h.authService.Logout(userID.(uint), accessToken.(string)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao fazer logout"})
 		return
 	}

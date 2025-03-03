@@ -26,11 +26,13 @@ type Claims struct {
 }
 
 type TokenService struct {
-	config *config.Config
+	config    *config.Config
+	blacklist *TokenBlacklist
 }
 
 func NewTokenService(cfg *config.Config) *TokenService {
-	return &TokenService{config: cfg}
+	blacklist := NewTokenBlacklist(1 * time.Hour)
+	return &TokenService{config: cfg, blacklist: blacklist}
 }
 
 // GenerateAccessToken gera um token JWT
@@ -76,7 +78,11 @@ func (ts *TokenService) GenerateRefreshToken() (string, time.Time, error) {
 
 // ValidateToken valida um token JWT
 func (ts *TokenService) ValidateToken(tokenString string) (*Claims, error) {
+	if ts.blacklist.IsBlacklisted(tokenString) {
+		return nil, ErrInvalidToken
+	}
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
+
 		// Verifica o método de assinatura
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrInvalidToken
@@ -123,4 +129,22 @@ func (ts *TokenService) GeneratePasswordResetToken(userID uint) (string, time.Ti
 	}
 
 	return tokenString, expiresAt, nil
+}
+
+func (ts *TokenService) BlacklistToken(tokenString string) error {
+	// Primeiro, validamos o token para obter seu tempo de expiração
+	claims, err := ts.ValidateToken(tokenString)
+	if err != nil {
+		return err
+	}
+
+	// Adicionamos à blacklist com o tempo de expiração
+	expTime := claims.ExpiresAt.Time
+	ts.blacklist.Add(tokenString, expTime)
+
+	return nil
+}
+
+func (ts *TokenService) IsTokenBlacklisted(tokenString string) bool {
+	return ts.blacklist.IsBlacklisted(tokenString)
 }
