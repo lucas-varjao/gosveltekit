@@ -70,5 +70,15 @@ func (r *UserRepository) Create(user *models.User) error {
 }
 
 func (r *UserRepository) Update(user *models.User) error {
+	// Validate required fields
+	if user.Email == "" {
+		return gorm.ErrInvalidField
+	}
+	if user.Username == "" {
+		return gorm.ErrInvalidField
+	}
+	if user.DisplayName == "" {
+		return gorm.ErrInvalidField
+	}
 	return r.db.Save(user).Error
 }
