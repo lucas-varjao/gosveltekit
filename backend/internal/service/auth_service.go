@@ -54,7 +54,6 @@ func (s *AuthService) Login(username, password string, ip, userAgent string) (*L
 	}
 	user, err := s.userRepo.FindByUsername(username)
 	if err != nil {
-		s.incrementFailedLoginAttempt(username)
 		return nil, ErrInvalidCredentials
 	}
 
@@ -73,7 +72,6 @@ func (s *AuthService) Login(username, password string, ip, userAgent string) (*L
 	// Gerando access token
 	accessToken, expiresAt, err := s.tokenService.GenerateAccessToken(user.ID, user.Role)
 	if err != nil {
-		s.incrementFailedLoginAttempt(username)
 		return nil, err
 	}
 
@@ -271,6 +269,41 @@ func (s *AuthService) ResetPassword(tokenFromUser, newPassword string) error {
 	matchedUser.ResetTokenExpiry = time.Time{}
 
 	return s.userRepo.Update(matchedUser)
+}
+
+func (s *AuthService) Register(username, email, password, displayName string) (*models.User, error) {
+	// Check if the user already exists by username
+	userByUsername, _ := s.userRepo.FindByUsername(username)
+	if userByUsername != nil {
+		return nil, errors.New("username already exists")
+	}
+
+	// Check if the user already exists by email
+	userByEmail, _ := s.userRepo.FindByEmail(email)
+	if userByEmail != nil {
+		return nil, errors.New("email already exists")
+	}
+
+	// Hash the password
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the user
+	user := &models.User{
+		Username:     username,
+		Email:        email,
+		PasswordHash: string(passwordHash),
+		DisplayName:  displayName,
+	}
+
+	// Save the user to the database
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *AuthService) incrementFailedLoginAttempt(username string) {

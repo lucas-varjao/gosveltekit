@@ -67,6 +67,11 @@ func SetupRouter(
 		admin.Use(middleware.RoleMiddleware("admin"))
 		{
 			// Rotas de admin aqui
+			admin.GET("/dashboard", func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{
+					"message": "Admin Dashboard",
+				})
+			})
 		}
 
 		// Outras rotas protegidas

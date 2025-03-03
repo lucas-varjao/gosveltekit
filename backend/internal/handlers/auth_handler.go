@@ -55,8 +55,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Get client IP and user agent
-	ip := c.ClientIP()
-	userAgent := c.Request.UserAgent()
+	ip := "N/A"
+	ip = c.ClientIP()
+	userAgent := "N/A"
+	userAgent = c.Request.UserAgent()
 
 	response, err := h.authService.Login(req.Username, req.Password, ip, userAgent)
 	if err != nil {
@@ -94,6 +96,10 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	if err != nil {
 		status := http.StatusUnauthorized
 		message := "token de atualização inválido"
+
+		if err == service.ErrExpiredToken {
+			message = "token expirado"
+		}
 
 		c.JSON(status, gin.H{"error": message})
 		return
@@ -144,15 +150,15 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Forward to service layer (not implemented yet)
-	// user, err := h.authService.Register(req.Username, req.Email, req.Password, req.DisplayName)
-	// if err != nil {
-	//     status := http.StatusBadRequest
-	//     c.JSON(status, gin.H{"error": err.Error()})
-	//     return
-	// }
+	// Forward to service layer
+	user, err := h.authService.Register(req.Username, req.Email, req.Password, req.DisplayName)
+	if err != nil {
+		status := http.StatusBadRequest
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "registro realizado com sucesso"})
+	c.JSON(http.StatusOK, user)
 }
 
 // RequestPasswordReset handles password reset requests

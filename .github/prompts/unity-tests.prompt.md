@@ -1,4 +1,4 @@
-Please generate comprehensive unit tests for the code below. The code is written in Go, and I need thorough unit tests that:
+# Please generate comprehensive unit tests for the code below. The code is written in Go, and I need thorough unit tests that
 
 1. Cover all public methods/functions
 2. Include test cases for happy paths and error scenarios
