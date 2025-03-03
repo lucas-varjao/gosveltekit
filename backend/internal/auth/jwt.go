@@ -1,3 +1,25 @@
+// Package auth provides JWT (JSON Web Token) authentication functionality.
+//
+// It handles token generation, validation, blacklisting, and password reset flows.
+// The package uses the github.com/golang-jwt/jwt/v5 library for JWT operations.
+//
+// Main components:
+// - TokenService: Core service for handling JWT tokens
+// - Claims: Custom JWT claims structure
+// - TokenBlacklist: Handles invalidated tokens
+//
+// Error types:
+// - ErrInvalidToken: Returned when a token is not valid
+// - ErrExpiredToken: Returned when a token has expired
+//
+// The package supports:
+// - Access tokens for authentication
+// - Refresh tokens for session renewal
+// - Password reset tokens with secure hashing
+// - Token blacklisting for security
+//
+// Configuration is provided through the config.Config structure,
+// which includes settings for token TTL, issuer, and secret keys.
 // auth/jwt.go
 package auth
 
