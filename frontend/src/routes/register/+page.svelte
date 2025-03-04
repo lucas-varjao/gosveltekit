@@ -234,10 +234,10 @@
 				</a>
 			</div>
 			
-			<!-- Using grid layout for the form -->
-			<form onsubmit={handleSubmit} class="grid grid-cols-1 gap-4">
+			<!-- Using flexbox layout for the form -->
+			<form onsubmit={handleSubmit} class="flex flex-col gap-4">
 				<!-- Username Field -->
-				<div class="grid gap-2">
+				<div class="flex flex-col gap-2">
 					<label for="username" class="text-sm font-medium text-slate-200">
 						Username
 					</label>
@@ -255,7 +255,7 @@
 				</div>
 				
 				<!-- Email Field -->
-				<div class="grid gap-2">
+				<div class="flex flex-col gap-2">
 					<label for="email" class="text-sm font-medium text-slate-200">
 						Email
 					</label>
@@ -273,7 +273,7 @@
 				</div>
 
 				<!-- Display Name Field -->
-				<div class="grid gap-2">
+				<div class="flex flex-col gap-2">
 					<label for="displayName" class="text-sm font-medium text-slate-200">
 						Display Name
 					</label>
@@ -291,7 +291,7 @@
 				</div>
 				
 				<!-- Password Field -->
-				<div class="grid gap-2">
+				<div class="flex flex-col gap-2">
 					<label for="password" class="text-sm font-medium text-slate-200">
 						Password
 					</label>
@@ -325,9 +325,9 @@
 					</div>
 					
 					<!-- Password requirements list -->
-					<div class="grid gap-1">
+					<div class="flex flex-col gap-1">
 						<p class="text-slate-300 text-sm">Your password must contain:</p>
-						<ul class="grid gap-1 ml-2">
+						<ul class="flex flex-col gap-1 ml-2">
 							<li class="flex items-center gap-1">
 								<span class={passwordRequirements.length ? "text-green-500" : "text-slate-400"}>
 									{#if passwordRequirements.length}
@@ -407,7 +407,7 @@
 				</div>
 				
 				<!-- Confirm Password Field -->
-				<div class="grid gap-2">
+				<div class="flex flex-col gap-2">
 					<label for="confirmPassword" class="text-sm font-medium text-slate-200">
 						Confirm Password
 					</label>

@@ -203,10 +203,10 @@
                         Please enter and confirm your new password below.
                     </p>
                     
-                    <!-- Using grid layout for the form -->
-                    <form onsubmit={handleSubmit} class="grid grid-cols-1 gap-6">
+                    <!-- Using flexbox layout for the form -->
+                    <form onsubmit={handleSubmit} class="flex flex-col gap-4">
                         <!-- Password Field -->
-                        <div class="grid gap-2">
+                        <div class="flex flex-col gap-2">
                             <label for="password" class="text-sm font-medium text-slate-200">
                                 New Password
                             </label>
@@ -244,9 +244,9 @@
                         </div>
                         
                         <!-- Password requirements list -->
-                        <div class="grid gap-2 text-sm">
+                        <div class="flex flex-col gap-2 text-sm">
                             <p class="text-slate-300">Your password must contain:</p>
-                            <ul class="grid gap-1 ml-2">
+                            <ul class="flex flex-col gap-1 ml-2">
                                 <li class="flex items-center gap-1">
                                     <span class={passwordRequirements.length ? "text-green-500" : "text-slate-400"}>
                                         {#if passwordRequirements.length}
@@ -321,7 +321,7 @@
                         </div>
                         
                         <!-- Confirm Password Field -->
-                        <div class="grid gap-2">
+                        <div class="flex flex-col gap-2">
                             <label for="confirmPassword" class="text-sm font-medium text-slate-200">
                                 Confirm Password
                             </label>

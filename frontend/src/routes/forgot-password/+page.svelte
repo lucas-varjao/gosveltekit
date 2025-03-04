@@ -121,10 +121,10 @@
                         Enter your email address and we'll send you a link to reset your password.
                     </p>
                     
-                    <!-- Using grid layout for the form -->
-                    <form onsubmit={handleSubmit} class="grid grid-cols-1 gap-6">
+                    <!-- Using flexbox for the form -->
+                    <form onsubmit={handleSubmit} class="flex flex-col gap-4">
                         <!-- Email Field -->
-                        <div class="grid gap-2">
+                        <div class="flex flex-col gap-2">
                             <label for="email" class="text-sm font-medium text-slate-200">
                                 Email Address
                             </label>

@@ -18,6 +18,9 @@ func SetupRouter(
 ) *gin.Engine {
 	r := gin.Default()
 
+	// Add CORS middleware
+	r.Use(middleware.CorsMiddleware())
+
 	// Root route
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

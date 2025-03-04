@@ -22,7 +22,7 @@
 - UI components are built with shadcn-svelte
 - Always use Svelte 5 with the new features for the frontend.
 - This project only uses dark mode.
-- Use modern CSS layout techniques like flexbox and grid
+- Use modern CSS layout techniques like flexbox and grid.
 
 ## IMPORTANT
 

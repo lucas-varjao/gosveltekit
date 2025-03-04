@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
+	import { authStore } from '$lib/stores/auth';
 
 	// State declaration using Svelte 5 runes
 	let username = $state('');
@@ -77,28 +78,8 @@
 			try {
 				isLoading = true;
 				
-				// Simulate API call for now (will be connected to the backend later)
-				await new Promise(resolve => setTimeout(resolve, 1500));
-				
-				// Success - in real implementation, we would store the tokens and redirect
-				// Example of what the real implementation would look like:
-				// 
-				// const response = await fetch('/api/login', {
-				//   method: 'POST',
-				//   headers: { 'Content-Type': 'application/json' },
-				//   body: JSON.stringify({ username, password })
-				// });
-				// 
-				// if (!response.ok) {
-				//   const data = await response.json();
-				//   throw new Error(data.error || 'Login failed');
-				// }
-				// 
-				// const data = await response.json();
-				// localStorage.setItem('accessToken', data.access_token);
-				// localStorage.setItem('refreshToken', data.refresh_token);
-				// localStorage.setItem('expiresAt', data.expires_at);
-				// localStorage.setItem('user', JSON.stringify(data.user));
+				// Use the auth store to login
+				await authStore.login(username, password);
 				
 				// Redirect to home page after successful login
 				goto('/');
@@ -133,10 +114,10 @@
 				</div>
 			{/if}
 			
-			<!-- Using grid layout for the form -->
-			<form onsubmit={handleSubmit} class="grid grid-cols-1 gap-4">
+			<!-- Using flexbox for the form instead of grid -->
+			<form onsubmit={handleSubmit} class="flex flex-col gap-4">
 				<!-- Username Field -->
-				<div class="grid gap-2">
+				<div class="flex flex-col gap-2">
 					<label for="username" class="text-sm font-medium text-slate-200">
 						Username
 					</label>
@@ -154,7 +135,7 @@
 				</div>
 				
 				<!-- Password Field -->
-				<div class="grid gap-2">
+				<div class="flex flex-col gap-2">
 					<label for="password" class="text-sm font-medium text-slate-200">
 						Password
 					</label>
