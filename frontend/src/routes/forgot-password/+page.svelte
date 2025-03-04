@@ -88,80 +88,83 @@
     }
 </script>
 
-<section class="py-12">
-    <div class="max-w-md mx-auto bg-slate-900 rounded border border-slate-800 shadow-lg p-8">
-        <h1 class="text-3xl font-bold mb-6 text-center text-white">Reset Password</h1>
-        
-        {#if submitted && success}
-            <div class="space-y-6">
-                <div transition:slide class="bg-blue-900/50 border border-blue-500 text-blue-300 px-4 py-3 rounded" role="alert">
-                    <p class="font-medium">Check your email</p>
-                    <p class="mt-1">If an account exists with the email {email}, you will receive a password reset link shortly.</p>
-                </div>
-                
-                <div class="text-center mt-6">
-                    <button 
-                        onclick={resetForm}
-                        class="text-blue-500 hover:text-blue-400 font-medium"
-                    >
-                        Request another reset link
-                    </button>
-                </div>
-                
-                <div class="text-center mt-2">
-                    <a href="/login" class="text-slate-400 hover:text-slate-300">
-                        Return to login
-                    </a>
-                </div>
-            </div>
-        {:else}
-            <div class="space-y-5">
-                <p class="text-slate-400 text-center mb-6">
-                    Enter your email address and we'll send you a link to reset your password.
-                </p>
-                
-                <form onsubmit={handleSubmit} class="space-y-6">
-                    <!-- Email Field -->
-                    <div class="space-y-2">
-                        <label for="email" class="block text-sm font-medium text-slate-200">
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            id="email"
-                            bind:value={email}
-                            onblur={handleBlur}
-                            placeholder="Enter your email address"
-                            class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.email && touched.email ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        {#if errors.email && touched.email}
-                            <p transition:slide class="text-sm text-red-500 mt-1">{errors.email}</p>
-                        {/if}
+<!-- Using flexbox for main page layout -->
+<section class="flex justify-center items-center min-h-[calc(100vh-6rem)] py-12 px-4">
+    <div class="w-full max-w-md bg-slate-900 rounded border border-slate-800 shadow-lg p-8">
+        <!-- Using flexbox for vertical content alignment -->
+        <div class="flex flex-col gap-6">
+            <h1 class="text-3xl font-bold text-center text-white">Reset Password</h1>
+            
+            {#if submitted && success}
+                <div class="flex flex-col gap-6">
+                    <div transition:slide class="bg-blue-900/50 border border-blue-500 text-blue-300 px-4 py-3 rounded" role="alert">
+                        <p class="font-medium">Check your email</p>
+                        <p class="mt-1">If an account exists with the email {email}, you will receive a password reset link shortly.</p>
                     </div>
                     
-                    <!-- Submit Button -->
-                    <div class="pt-2">
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    <div class="flex flex-col gap-4 items-center">
+                        <button 
+                            onclick={resetForm}
+                            class="text-blue-500 hover:text-blue-400 font-medium"
                         >
-                            {#if isLoading}
-                                <span class="inline-block animate-pulse">Sending Reset Link...</span>
-                            {:else}
-                                Send Reset Link
-                            {/if}
+                            Request another reset link
                         </button>
+                        
+                        <a href="/login" class="text-slate-400 hover:text-slate-300">
+                            Return to login
+                        </a>
                     </div>
-                </form>
-                
-                <!-- Back to Login -->
-                <div class="text-center mt-4">
-                    <a href="/login" class="text-blue-500 hover:text-blue-400 font-medium">
-                        Back to Login
-                    </a>
                 </div>
-            </div>
-        {/if}
+            {:else}
+                <div class="flex flex-col gap-6">
+                    <p class="text-slate-400 text-center">
+                        Enter your email address and we'll send you a link to reset your password.
+                    </p>
+                    
+                    <!-- Using grid layout for the form -->
+                    <form onsubmit={handleSubmit} class="grid grid-cols-1 gap-6">
+                        <!-- Email Field -->
+                        <div class="grid gap-2">
+                            <label for="email" class="text-sm font-medium text-slate-200">
+                                Email Address
+                            </label>
+                            <input
+                                type="email"
+                                id="email"
+                                bind:value={email}
+                                onblur={handleBlur}
+                                placeholder="Enter your email address"
+                                class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.email && touched.email ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            {#if errors.email && touched.email}
+                                <p transition:slide class="text-sm text-red-500">{errors.email}</p>
+                            {/if}
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                {#if isLoading}
+                                    <span class="inline-block animate-pulse">Sending Reset Link...</span>
+                                {:else}
+                                    Send Reset Link
+                                {/if}
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Back to Login -->
+                    <div class="flex justify-center">
+                        <a href="/login" class="text-blue-500 hover:text-blue-400 font-medium">
+                            Back to Login
+                        </a>
+                    </div>
+                </div>
+            {/if}
+        </div>
     </div>
 </section>
