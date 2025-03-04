@@ -10,6 +10,13 @@
 	let submitted = $state(false);
 	let errors = $state<Record<string, string>>({});
 	let isLoading = $state(false);
+	let touched = $state<Record<string, boolean>>({
+		username: false,
+		email: false,
+		password: false,
+		confirmPassword: false,
+		displayName: false
+	});
 
 	// Validation functions
 	function validateUsername(value: string): string | null {
@@ -60,10 +67,56 @@
 		}
 	});
 
+	// Reactive validation using $effect
+	$effect(() => {
+		// Validate username when it changes and has been touched
+		if (touched.username) {
+			errors.username = validateUsername(username) || '';
+		}
+	});
+
+	$effect(() => {
+		// Validate email when it changes and has been touched
+		if (touched.email) {
+			errors.email = validateEmail(email) || '';
+		}
+	});
+
+	$effect(() => {
+		// Validate password when it changes and has been touched
+		if (touched.password) {
+			errors.password = validatePassword(password) || '';
+		}
+	});
+
+	$effect(() => {
+		// Validate confirmPassword when it or password changes and has been touched
+		if (touched.confirmPassword) {
+			errors.confirmPassword = validateConfirmPassword(confirmPassword) || '';
+		}
+	});
+
+	$effect(() => {
+		// Validate displayName when it changes and has been touched
+		if (touched.displayName) {
+			errors.displayName = validateDisplayName(displayName) || '';
+		}
+	});
+
+	// Handle input blur to mark field as touched
+	function handleBlur(field: keyof typeof touched) {
+		touched[field] = true;
+	}
+
 	// Form submission handler
 	async function handleSubmit(event: Event) {
         event.preventDefault();
 		submitted = true;
+		
+		// Mark all fields as touched
+		Object.keys(touched).forEach(key => {
+			touched[key as keyof typeof touched] = true;
+		});
 		
 		// Perform validation
 		const usernameError = validateUsername(username);
@@ -132,10 +185,11 @@
 					type="text"
 					id="username"
 					bind:value={username}
+					onblur={() => handleBlur('username')}
 					placeholder="Enter username"
-					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.username ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.username && touched.username ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
-				{#if errors.username && submitted}
+				{#if errors.username && touched.username}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.username}</p>
 				{/if}
 			</div>
@@ -149,10 +203,11 @@
 					type="email"
 					id="email"
 					bind:value={email}
+					onblur={() => handleBlur('email')}
 					placeholder="Enter email address"
-					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.email ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.email && touched.email ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
-				{#if errors.email && submitted}
+				{#if errors.email && touched.email}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.email}</p>
 				{/if}
 			</div>
@@ -166,10 +221,11 @@
 					type="text"
 					id="displayName"
 					bind:value={displayName}
+					onblur={() => handleBlur('displayName')}
 					placeholder="Enter your full name"
-					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.displayName ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.displayName && touched.displayName ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
-				{#if errors.displayName && submitted}
+				{#if errors.displayName && touched.displayName}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.displayName}</p>
 				{/if}
 			</div>
@@ -183,10 +239,11 @@
 					type="password"
 					id="password"
 					bind:value={password}
+					onblur={() => handleBlur('password')}
 					placeholder="Enter password"
-					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.password ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.password && touched.password ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
-				{#if errors.password && submitted}
+				{#if errors.password && touched.password}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.password}</p>
 				{/if}
 			</div>
@@ -200,10 +257,11 @@
 					type="password"
 					id="confirmPassword"
 					bind:value={confirmPassword}
+					onblur={() => handleBlur('confirmPassword')}
 					placeholder="Confirm your password"
-					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.confirmPassword ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.confirmPassword && touched.confirmPassword ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
-				{#if errors.confirmPassword && submitted}
+				{#if errors.confirmPassword && touched.confirmPassword}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
 				{/if}
 			</div>
