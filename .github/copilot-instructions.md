@@ -21,6 +21,7 @@ GoSvelteKit is a template/base project with a Golang backend and SvelteKit (Svel
 - Bun is our JavaScript runtime and package manager
 - UI components are built with shadcn-svelte
 - Always use Svelte 5 with the new features for the frontend.
+- This project only uses dark mode.
 
 ## Design Preferences
 

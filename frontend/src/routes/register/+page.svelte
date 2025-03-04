@@ -111,8 +111,16 @@
 </script>
 
 <section class="py-12">
-	<div class="max-w-md mx-auto bg-slate-900 rounded-lg border border-slate-800 shadow-lg p-8">
-		<h1 class="text-3xl font-bold mb-6 text-center text-white">Create an Account</h1>
+	<div class="max-w-lg mx-auto bg-slate-900 rounded border border-slate-800 shadow-lg p-8">
+		<h1 class="text-3xl font-bold mb-6 text-center text-white">Create an account</h1>
+
+		<!-- Login Link -->
+			<div class="text-center m-4 text-slate-400">
+				Already have an account?
+				<a href="/login" class="text-blue-500 hover:text-blue-400 font-medium">
+					Login
+				</a>
+			</div>
 		
 		<form onsubmit={handleSubmit} class="space-y-4">
 			<!-- Username Field -->
@@ -125,8 +133,7 @@
 					id="username"
 					bind:value={username}
 					placeholder="Enter username"
-					class="w-full px-3 py-2 bg-slate-800 text-white border rounded-md border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-					class:border-red-500={errors.username}
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.username ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
 				{#if errors.username && submitted}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.username}</p>
@@ -143,11 +150,27 @@
 					id="email"
 					bind:value={email}
 					placeholder="Enter email address"
-					class="w-full px-3 py-2 bg-slate-800 text-white border rounded-md border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-					class:border-red-500={errors.email}
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.email ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
 				{#if errors.email && submitted}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.email}</p>
+				{/if}
+			</div>
+
+			<!-- Display Name Field -->
+			<div class="space-y-2">
+				<label for="displayName" class="block text-sm font-medium text-slate-200">
+					Display Name
+				</label>
+				<input
+					type="text"
+					id="displayName"
+					bind:value={displayName}
+					placeholder="Enter your full name"
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.displayName ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
+				/>
+				{#if errors.displayName && submitted}
+					<p transition:slide class="text-sm text-red-500 mt-1">{errors.displayName}</p>
 				{/if}
 			</div>
 			
@@ -161,8 +184,7 @@
 					id="password"
 					bind:value={password}
 					placeholder="Enter password"
-					class="w-full px-3 py-2 bg-slate-800 text-white border rounded-md border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-					class:border-red-500={errors.password}
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.password ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
 				{#if errors.password && submitted}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.password}</p>
@@ -179,54 +201,29 @@
 					id="confirmPassword"
 					bind:value={confirmPassword}
 					placeholder="Confirm your password"
-					class="w-full px-3 py-2 bg-slate-800 text-white border rounded-md border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-					class:border-red-500={errors.confirmPassword}
+					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.confirmPassword ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
 				/>
 				{#if errors.confirmPassword && submitted}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
 				{/if}
 			</div>
 			
-			<!-- Display Name Field -->
-			<div class="space-y-2">
-				<label for="displayName" class="block text-sm font-medium text-slate-200">
-					Display Name
-				</label>
-				<input
-					type="text"
-					id="displayName"
-					bind:value={displayName}
-					placeholder="Enter your full name"
-					class="w-full px-3 py-2 bg-slate-800 text-white border rounded-md border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-					class:border-red-500={errors.displayName}
-				/>
-				{#if errors.displayName && submitted}
-					<p transition:slide class="text-sm text-red-500 mt-1">{errors.displayName}</p>
-				{/if}
-			</div>
 			
 			<!-- Submit Button -->
 			<div class="pt-2">
 				<button
 					type="submit"
 					disabled={isLoading}
-					class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+					class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
 				>
 					{#if isLoading}
 						<span class="inline-block animate-pulse">Creating Account...</span>
 					{:else}
-						Register
+						Create account
 					{/if}
 				</button>
-			</div>
+			</div>			
 			
-			<!-- Login Link -->
-			<div class="text-center mt-4 text-slate-400">
-				Already have an account?
-				<a href="/login" class="text-blue-500 hover:text-blue-400 font-medium">
-					Login
-				</a>
-			</div>
 		</form>
 	</div>
 </section>
