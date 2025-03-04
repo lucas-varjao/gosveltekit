@@ -208,7 +208,6 @@
 					{/if}
 				</button>
 			</div>			
-			
 		</form>
 	</div>
 </section>
