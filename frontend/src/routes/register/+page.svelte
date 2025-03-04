@@ -10,12 +10,23 @@
 	let submitted = $state(false);
 	let errors = $state<Record<string, string>>({});
 	let isLoading = $state(false);
+	let showPassword = $state(false);
+	let showConfirmPassword = $state(false);
 	let touched = $state<Record<string, boolean>>({
 		username: false,
 		email: false,
 		password: false,
 		confirmPassword: false,
 		displayName: false
+	});
+
+	// Password requirement states
+	let passwordRequirements = $state({
+		length: false,
+		lowercase: false,
+		uppercase: false,
+		number: false,
+		special: false
 	});
 
 	// Validation functions
@@ -56,6 +67,47 @@
 		return null;
 	}
 
+	// Individual password requirement validation functions
+	function checkPasswordLength(value: string): boolean {
+		return value.length >= 8;
+	}
+
+	function checkLowercase(value: string): boolean {
+		return /[a-z]/.test(value);
+	}
+
+	function checkUppercase(value: string): boolean {
+		return /[A-Z]/.test(value);
+	}
+
+	function checkNumber(value: string): boolean {
+		return /\d/.test(value);
+	}
+
+	function checkSpecialChar(value: string): boolean {
+		return /[!@#$%^&*]/.test(value);
+	}
+
+	// Update password requirements check
+	function updatePasswordRequirements(value: string) {
+		passwordRequirements = {
+			length: checkPasswordLength(value),
+			lowercase: checkLowercase(value),
+			uppercase: checkUppercase(value),
+			number: checkNumber(value),
+			special: checkSpecialChar(value)
+		};
+	}
+
+	// Toggle password visibility
+	function togglePasswordVisibility() {
+		showPassword = !showPassword;
+	}
+
+	function toggleConfirmPasswordVisibility() {
+		showConfirmPassword = !showConfirmPassword;
+	}
+
 	// Reactive validation
 	$effect(() => {
 		if (submitted) {
@@ -83,6 +135,9 @@
 	});
 
 	$effect(() => {
+			// Update password requirements whenever password changes
+		updatePasswordRequirements(password);
+		
 		// Validate password when it changes and has been touched
 		if (touched.password) {
 			errors.password = validatePassword(password) || '';
@@ -235,14 +290,112 @@
 				<label for="password" class="block text-sm font-medium text-slate-200">
 					Password
 				</label>
-				<input
-					type="password"
-					id="password"
-					bind:value={password}
-					onblur={() => handleBlur('password')}
-					placeholder="Enter password"
-					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.password && touched.password ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
-				/>
+				<div class="relative">
+					<input
+						type={showPassword ? "text" : "password"}
+						id="password"
+						bind:value={password}
+						onblur={() => handleBlur('password')}
+						placeholder="Enter password"
+						class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.password && touched.password ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+					/>
+					<button 
+						type="button" 
+						class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none" 
+						onclick={togglePasswordVisibility}
+					>
+						{#if showPassword}
+							<!-- Eye slash icon for hide password -->
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+							</svg>
+						{:else}
+							<!-- Eye icon for show password -->
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+							</svg>
+						{/if}
+					</button>
+				</div>
+				
+				<!-- Password requirements list -->
+				<div class="mt-2 space-y-1 text-sm">
+					<p class="text-slate-300">Your password must contain:</p>
+					<ul class="ml-2 space-y-1">
+						<li class="flex items-center gap-1">
+							<span class={passwordRequirements.length ? "text-green-500" : "text-slate-400"}>
+								{#if passwordRequirements.length}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+									</svg>
+								{:else}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								{/if}
+							</span>
+							<span class={passwordRequirements.length ? "text-green-500" : "text-slate-400"}>No mínimo 8 caracteres</span>
+						</li>
+						<li class="flex items-center gap-1">
+							<span class={passwordRequirements.lowercase ? "text-green-500" : "text-slate-400"}>
+								{#if passwordRequirements.lowercase}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+									</svg>
+								{:else}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								{/if}
+							</span>
+							<span class={passwordRequirements.lowercase ? "text-green-500" : "text-slate-400"}>Uma letra minúscula</span>
+						</li>
+						<li class="flex items-center gap-1">
+							<span class={passwordRequirements.uppercase ? "text-green-500" : "text-slate-400"}>
+								{#if passwordRequirements.uppercase}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+									</svg>
+								{:else}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								{/if}
+							</span>
+							<span class={passwordRequirements.uppercase ? "text-green-500" : "text-slate-400"}>Uma letra maiúscula</span>
+						</li>
+						<li class="flex items-center gap-1">
+							<span class={passwordRequirements.number ? "text-green-500" : "text-slate-400"}>
+								{#if passwordRequirements.number}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+									</svg>
+								{:else}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								{/if}
+							</span>
+							<span class={passwordRequirements.number ? "text-green-500" : "text-slate-400"}>Um número</span>
+						</li>
+						<li class="flex items-center gap-1">
+							<span class={passwordRequirements.special ? "text-green-500" : "text-slate-400"}>
+								{#if passwordRequirements.special}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+									</svg>
+								{:else}
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								{/if}
+							</span>
+							<span class={passwordRequirements.special ? "text-green-500" : "text-slate-400"}>Um caractere especial (!@#$%^&*)</span>
+						</li>
+					</ul>
+				</div>
+				
 				{#if errors.password && touched.password}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.password}</p>
 				{/if}
@@ -253,19 +406,38 @@
 				<label for="confirmPassword" class="block text-sm font-medium text-slate-200">
 					Confirm Password
 				</label>
-				<input
-					type="password"
-					id="confirmPassword"
-					bind:value={confirmPassword}
-					onblur={() => handleBlur('confirmPassword')}
-					placeholder="Confirm your password"
-					class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.confirmPassword && touched.confirmPassword ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500"
-				/>
+				<div class="relative">
+					<input
+						type={showConfirmPassword ? "text" : "password"}
+						id="confirmPassword"
+						bind:value={confirmPassword}
+						onblur={() => handleBlur('confirmPassword')}
+						placeholder="Confirm your password"
+						class="w-full px-3 py-2 bg-slate-800 text-white border-2 rounded {errors.confirmPassword && touched.confirmPassword ? 'border-red-500' : 'border-slate-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+					/>
+					<button 
+						type="button" 
+						class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200 focus:outline-none" 
+						onclick={toggleConfirmPasswordVisibility}
+					>
+						{#if showConfirmPassword}
+							<!-- Eye slash icon for hide password -->
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+							</svg>
+						{:else}
+							<!-- Eye icon for show password -->
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+							</svg>
+						{/if}
+					</button>
+				</div>
 				{#if errors.confirmPassword && touched.confirmPassword}
 					<p transition:slide class="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
 				{/if}
 			</div>
-			
 			
 			<!-- Submit Button -->
 			<div class="pt-2">
