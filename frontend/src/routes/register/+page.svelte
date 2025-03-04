@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { slide } from 'svelte/transition';
 
 	// State declaration using Svelte 5 runes
@@ -208,7 +209,7 @@
 				submitted = false;
 				
 				// Show success message or redirect
-				alert('Registration successful!');
+				goto('/login')
 			} catch (error) {
 				console.error('Registration error:', error);
 			} finally {
