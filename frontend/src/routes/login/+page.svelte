@@ -82,7 +82,7 @@
 				await authStore.login(username, password);
 				
 				// Redirect to home page after successful login
-				goto('/');
+				goto('/logged');
 			} catch (error) {
 				console.error('Login error:', error);
 				authError = error instanceof Error ? error.message : 'Login failed. Please try again.';

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { slide } from 'svelte/transition';
+	import { authStore } from '$lib/stores/auth';
+
 
 	// State declaration using Svelte 5 runes
 	let username = $state('');
@@ -29,6 +31,9 @@
 		number: false,
 		special: false
 	});
+
+	let registerError = $state('');
+
 
 	// Validation functions
 	function validateUsername(value: string): string | null {
@@ -168,6 +173,9 @@
 	async function handleSubmit(event: Event) {
         event.preventDefault();
 		submitted = true;
+
+		registerError = '';
+
 		
 		// Mark all fields as touched
 		Object.keys(touched).forEach(key => {
@@ -198,7 +206,7 @@
 				isLoading = true;
 				
 				// Simulate API call for now (will be connected to the backend later)
-				await new Promise(resolve => setTimeout(resolve, 1500));
+				await authStore.register({username, email, password, display_name: displayName})
 				
 				// Reset form after successful submission
 				username = '';
@@ -212,6 +220,7 @@
 				goto('/login')
 			} catch (error) {
 				console.error('Registration error:', error);
+				registerError = error instanceof Error ? error.message : 'Registration failed. Please try again.';
 			} finally {
 				isLoading = false;
 			}
@@ -233,6 +242,12 @@
 					Login
 				</a>
 			</div>
+
+			{#if registerError}
+				<div transition:slide class="bg-red-900/50 border border-red-500 text-red-300 px-4 py-3 rounded" role="alert">
+					<p>{registerError}</p>
+				</div>
+			{/if}
 			
 			<!-- Using flexbox layout for the form -->
 			<form onsubmit={handleSubmit} class="flex flex-col gap-4">
