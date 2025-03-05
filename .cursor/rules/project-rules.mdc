@@ -1,5 +1,5 @@
 ---
-description: Importante project rules that need to be read ALWAYS
+description: Importante project rules that needs to be ALWAYS included
 globs: 
 alwaysApply: true
 ---

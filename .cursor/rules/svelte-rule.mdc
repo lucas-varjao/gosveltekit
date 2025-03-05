@@ -1,5 +1,5 @@
 ---
-description: Use of Svelte 5
+description: Use of Svelte rules
 globs: *.svelte, *.ts
 alwaysApply: false
 ---

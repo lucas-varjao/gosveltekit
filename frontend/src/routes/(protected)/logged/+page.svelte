@@ -3,9 +3,50 @@
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';	
+	import { onMount } from 'svelte';
+	import { apiRequest, getAccessToken } from '$lib/api/client';
+
 	// User data from auth store
 	let user = $derived($authStore.user);
 	let isLoading = $derived($authStore.isLoading);
+
+	interface Data {
+		message: string;
+	}
+
+	let data = $state<Data>()
+
+	async function fetchData() {
+		try {
+			const response = await apiRequest<Data>('/api/protected', {
+				method: 'GET',
+				headers: {
+					'Authorization': `Bearer ${getAccessToken()}`
+				}
+			})
+
+			console.log(response);
+
+			data = response;
+		} catch (error) {
+			console.error('Error fetching data:', error);
+		}
+	}
+
+	let intervalId: number;
+
+	onMount(() => {
+		// Buscar dados imediatamente na montagem
+		fetchData();
+		
+		// Configurar intervalo para buscar a cada 5 minutos (300000 ms)
+		intervalId = setInterval(fetchData, 300000);
+		
+		// Limpar o intervalo quando o componente for destruído
+		return () => {
+			if (intervalId) clearInterval(intervalId);
+		};
+	});
 
 
 	// Function to handle logout
@@ -61,6 +102,7 @@
 						<span class="text-slate-400">User ID:</span>
 						<span class="font-medium">{user.ID}</span>
 					</div>
+					<p class="text-slate-400">Data from backend: {data?.message}</p>
 				</div>
 			</div>		
 		{/if}

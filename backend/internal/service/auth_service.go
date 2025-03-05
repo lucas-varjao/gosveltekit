@@ -95,7 +95,8 @@ func (s *AuthService) Login(username, password string, ip, userAgent string) (*L
 
 	// Atualizando o usuário com o refresh token
 	user.RefreshToken = refreshToken
-	user.TokenExpiry = refreshExpiresAt
+	user.AccessTokenExpiry = expiresAt
+	user.RefreshTokenExpiry = refreshExpiresAt
 	user.LastLogin = time.Now()
 
 	if err := s.userRepo.Update(user); err != nil {
@@ -128,7 +129,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 	}
 
 	// Verificando se o token não expirou
-	if time.Now().After(user.TokenExpiry) {
+	if time.Now().After(user.RefreshTokenExpiry) {
 		return nil, auth.ErrExpiredToken
 	}
 
@@ -138,10 +139,12 @@ func (s *AuthService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 		return nil, err
 	}
 
+	user.AccessTokenExpiry = expiresAt
+
 	// Gerar novo refresh token apenas se estiver próximo da expiração
 	var newRefreshToken string
 
-	if time.Until(user.TokenExpiry) < 24*time.Hour {
+	if time.Until(user.RefreshTokenExpiry) < 24*time.Hour {
 		var tokenExpiry time.Time
 		newRefreshToken, tokenExpiry, err = s.tokenService.GenerateRefreshToken()
 		if err != nil {
@@ -149,7 +152,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 		}
 
 		user.RefreshToken = newRefreshToken
-		user.TokenExpiry = tokenExpiry
+		user.RefreshTokenExpiry = tokenExpiry
 
 		if err := s.userRepo.Update(user); err != nil {
 			return nil, err
@@ -184,7 +187,8 @@ func (s *AuthService) Logout(userID uint, accessToken string) error {
 
 	// Limpamos o refresh token
 	user.RefreshToken = ""
-	user.TokenExpiry = time.Time{}
+	user.AccessTokenExpiry = time.Time{}
+	user.RefreshTokenExpiry = time.Time{}
 
 	return s.userRepo.Update(user)
 }

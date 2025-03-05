@@ -244,7 +244,7 @@ func TestUserRepository_FindByRefreshToken(t *testing.T) {
 	// Set refresh token
 	refreshToken := "valid-refresh-token"
 	testUser.RefreshToken = refreshToken
-	testUser.TokenExpiry = time.Now().Add(24 * time.Hour)
+	testUser.RefreshTokenExpiry = time.Now().Add(24 * time.Hour)
 	db.Save(testUser)
 
 	tests := []struct {

@@ -198,7 +198,7 @@ func TestAuthService_Logout(t *testing.T) {
 	err = db.First(&updatedUser, user.ID).Error
 	require.NoError(t, err)
 	assert.Empty(t, updatedUser.RefreshToken)
-	assert.True(t, updatedUser.TokenExpiry.IsZero())
+	assert.True(t, updatedUser.RefreshTokenExpiry.IsZero())
 }
 
 func TestAuthService_Register_Success(t *testing.T) {
