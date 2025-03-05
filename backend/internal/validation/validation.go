@@ -1,4 +1,5 @@
-// validation/validation.go
+// backend/internal/validation/validation.go
+
 package validation
 
 import (
@@ -31,16 +32,16 @@ var (
 
 // List of common passwords to deny
 var commonPasswords = map[string]bool{
-	"password":     true,
-	"123456":       true,
-	"12345678":     true,
-	"admin":        true,
-	"qwerty":       true,
-	"abc123":       true,
-	"welcome":      true,
-	"welcome1":     true,
-	"password123":  true,
-	"senha123":     true,
+	"password":    true,
+	"123456":      true,
+	"12345678":    true,
+	"admin":       true,
+	"qwerty":      true,
+	"abc123":      true,
+	"welcome":     true,
+	"welcome1":    true,
+	"password123": true,
+	"senha123":    true,
 }
 
 // ValidateUsername ensures the username meets system requirements
@@ -118,8 +119,8 @@ func ValidatePassword(password string, username string) error {
 	// Check if password is a common password - compare lowercase to match case-insensitively
 	passwordLower := strings.ToLower(password)
 	for commonPass := range commonPasswords {
-		if commonPass == passwordLower || strings.HasPrefix(passwordLower, commonPass) || 
-           strings.Contains(passwordLower, commonPass) {
+		if commonPass == passwordLower || strings.HasPrefix(passwordLower, commonPass) ||
+			strings.Contains(passwordLower, commonPass) {
 			return ErrPasswordCommonWord
 		}
 	}
@@ -166,7 +167,7 @@ func ValidateLoginRequest(username, password string) error {
 	if err := ValidateUsername(username); err != nil {
 		return err
 	}
-	
+
 	// For login, we don't apply full password complexity checks
 	// since we're only verifying existing credentials
 	if password == "" || len(password) < 1 {
@@ -181,19 +182,19 @@ func ValidateRegistrationRequest(username, email, password, displayName string) 
 	if err := ValidateUsername(username); err != nil {
 		return err
 	}
-	
+
 	if err := ValidateEmail(email); err != nil {
 		return err
 	}
-	
+
 	if err := ValidatePassword(password, username); err != nil {
 		return err
 	}
-	
+
 	if err := ValidateDisplayName(displayName); err != nil {
 		return fmt.Errorf("nome de exibição inválido: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -202,15 +203,15 @@ func ValidatePasswordReset(token, newPassword, confirmPassword string) error {
 	if err := ValidateResetToken(token); err != nil {
 		return err
 	}
-	
+
 	if newPassword != confirmPassword {
 		return errors.New("as senhas não coincidem")
 	}
-	
+
 	// For password reset, we don't have username, so use an empty string
 	if err := ValidatePassword(newPassword, ""); err != nil {
 		return err
 	}
-	
+
 	return nil
 }

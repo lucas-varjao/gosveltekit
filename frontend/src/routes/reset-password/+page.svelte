@@ -1,3 +1,5 @@
+<!-- frontend/src/routes/reset-password/+page.svelte -->
+
 <script lang="ts">
     import { slide } from 'svelte/transition';
     import { page } from '$app/stores';

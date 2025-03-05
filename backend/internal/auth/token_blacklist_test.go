@@ -1,4 +1,4 @@
-// auth/token_blacklist_test.go
+// backend/internal/auth/token_blacklist_test.go
 package auth
 
 import (

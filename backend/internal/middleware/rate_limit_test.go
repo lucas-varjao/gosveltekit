@@ -1,4 +1,5 @@
-// middleware/rate_limit_test.go
+// backend/internal/middleware/rate_limit_test.go
+
 package middleware
 
 import (
@@ -78,24 +79,24 @@ func TestIPRateLimiter(t *testing.T) {
 		ipLimiter := NewIPRateLimiter(1, 1, time.Minute) // Rate of 1 request per second, burst of 1
 		ip1 := "192.168.1.4"
 		ip2 := "192.168.1.5"
-		
+
 		// Get limiters for different IPs
 		limiter1 := ipLimiter.GetLimiter(ip1)
 		limiter2 := ipLimiter.GetLimiter(ip2)
-		
+
 		// Use up the first limiter's quota
 		assert.True(t, limiter1.Allow(), "First request from IP1 should be allowed")
 		assert.False(t, limiter1.Allow(), "Second request from IP1 should be denied")
-		
+
 		// The second limiter should still allow requests
 		assert.True(t, limiter2.Allow(), "First request from IP2 should be allowed regardless of IP1's limit")
-		
+
 		// Verify the limiters are stored separately
 		ipLimiter.mu.RLock()
 		stored1 := ipLimiter.ips[ip1]
 		stored2 := ipLimiter.ips[ip2]
 		ipLimiter.mu.RUnlock()
-		
+
 		assert.Same(t, limiter1, stored1, "Limiter1 should be the same instance as stored")
 		assert.Same(t, limiter2, stored2, "Limiter2 should be the same instance as stored")
 		assert.NotSame(t, stored1, stored2, "Stored limiters should be different instances")

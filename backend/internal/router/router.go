@@ -1,4 +1,5 @@
-// router/router.go
+// backend/internal/router/router.go
+
 package router
 
 import (

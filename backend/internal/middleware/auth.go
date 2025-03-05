@@ -1,4 +1,5 @@
-// middleware/auth.go
+// backend/internal/middleware/auth.go
+
 package middleware
 
 import (

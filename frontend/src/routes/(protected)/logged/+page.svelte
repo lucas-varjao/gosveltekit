@@ -1,3 +1,5 @@
+<!-- frontend/src/routes/(protected)/logged/+page.svelte -->
+
 <script lang="ts">
 	import { authStore } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';	

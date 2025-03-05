@@ -1,4 +1,5 @@
-// middleware/auth_test.go
+// backend/internal/middleware/auth_test.go
+
 package middleware
 
 import (

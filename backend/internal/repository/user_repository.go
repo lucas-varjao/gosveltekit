@@ -1,4 +1,5 @@
-// repository/user_repository.go
+// backend/internal/repository/user_repository.go
+
 package repository
 
 import (

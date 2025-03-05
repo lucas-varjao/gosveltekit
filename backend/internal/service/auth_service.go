@@ -1,4 +1,5 @@
-// service/auth_service.go
+// backend/internal/service/auth_service.go
+
 package service
 
 import (

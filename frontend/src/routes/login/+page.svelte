@@ -1,3 +1,5 @@
+<!-- frontend/src/routes/login/+page.svelte -->
+
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';

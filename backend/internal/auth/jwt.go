@@ -1,3 +1,5 @@
+// backend/internal/auth/jwt.go
+
 // Package auth provides JWT (JSON Web Token) authentication functionality.
 //
 // It handles token generation, validation, blacklisting, and password reset flows.
@@ -20,7 +22,7 @@
 //
 // Configuration is provided through the config.Config structure,
 // which includes settings for token TTL, issuer, and secret keys.
-// auth/jwt.go
+
 package auth
 
 import (
