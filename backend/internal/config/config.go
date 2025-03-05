@@ -25,10 +25,22 @@ type JWTConfig struct {
 	Issuer           string        `mapstructure:"issuer"`
 }
 
+// EmailConfig contém configurações para envio de email
+type EmailConfig struct {
+	SMTPHost     string `mapstructure:"smtp_host"`
+	SMTPPort     int    `mapstructure:"smtp_port"`
+	SMTPUsername string `mapstructure:"smtp_username"`
+	SMTPPassword string `mapstructure:"smtp_password"`
+	FromEmail    string `mapstructure:"from_email"`
+	FromName     string `mapstructure:"from_name"`
+	ResetURL     string `mapstructure:"reset_url"`
+}
+
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Email    EmailConfig    `mapstructure:"email"`
 }
 
 var cfg *Config

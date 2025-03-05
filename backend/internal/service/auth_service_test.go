@@ -5,6 +5,7 @@ package service
 import (
 	"gosveltekit/internal/auth"
 	"gosveltekit/internal/config"
+	"gosveltekit/internal/email"
 	"gosveltekit/internal/models"
 	"gosveltekit/internal/repository"
 	"testing"
@@ -18,7 +19,7 @@ import (
 )
 
 // Test helpers
-func setupTest(t *testing.T) (*AuthService, *repository.UserRepository, *auth.TokenService, *gorm.DB) {
+func setupTest(t *testing.T) (*AuthService, *repository.UserRepository, *auth.TokenService, *email.MockEmailService, *gorm.DB) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
@@ -32,13 +33,23 @@ func setupTest(t *testing.T) (*AuthService, *repository.UserRepository, *auth.To
 			RefreshTokenTTL: 24 * time.Hour,
 			Issuer:          "test-issuer",
 		},
+		Email: config.EmailConfig{
+			SMTPHost:     "smtp.example.com",
+			SMTPPort:     587,
+			SMTPUsername: "test@example.com",
+			SMTPPassword: "password",
+			FromEmail:    "noreply@example.com",
+			FromName:     "Test App",
+			ResetURL:     "http://localhost:3000/reset-password?token=",
+		},
 	}
 
 	userRepo := repository.NewUserRepository(db)
 	tokenService := auth.NewTokenService(cfg)
-	authService := NewAuthService(userRepo, tokenService)
+	mockEmailService := email.NewMockEmailService()
+	authService := NewAuthService(userRepo, tokenService, mockEmailService)
 
-	return authService, userRepo, tokenService, db
+	return authService, userRepo, tokenService, mockEmailService, db
 }
 
 func createTestUser(t *testing.T, db *gorm.DB) *models.User {
@@ -62,15 +73,16 @@ func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 
 // Tests
 func TestNewAuthService(t *testing.T) {
-	authService, _, _, _ := setupTest(t)
+	authService, _, _, _, _ := setupTest(t)
 	assert.NotNil(t, authService)
 	assert.NotNil(t, authService.userRepo)
 	assert.NotNil(t, authService.tokenService)
+	assert.NotNil(t, authService.emailService)
 	assert.NotNil(t, authService.failedLoginAttempts)
 }
 
 func TestAuthService_Login_Success(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	response, err := authService.Login("testuser", "password123", "127.0.0.1", "test-agent")
@@ -86,7 +98,7 @@ func TestAuthService_Login_Success(t *testing.T) {
 }
 
 func TestAuthService_Login_InvalidCredentials(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, _, db := setupTest(t)
 	_ = createTestUser(t, db)
 
 	testCases := []struct {
@@ -125,7 +137,7 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 }
 
 func TestAuthService_Login_AccountLocked(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, _, db := setupTest(t)
 	_ = createTestUser(t, db)
 
 	// Attempt to login with wrong password 5 times
@@ -141,7 +153,7 @@ func TestAuthService_Login_AccountLocked(t *testing.T) {
 }
 
 func TestAuthService_Login_InactiveUser(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	// Deactivate user
@@ -154,7 +166,7 @@ func TestAuthService_Login_InactiveUser(t *testing.T) {
 }
 
 func TestAuthService_RefreshToken_Success(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	// First login to get a refresh token
@@ -174,7 +186,7 @@ func TestAuthService_RefreshToken_Success(t *testing.T) {
 }
 
 func TestAuthService_RefreshToken_Invalid(t *testing.T) {
-	authService, _, _, _ := setupTest(t)
+	authService, _, _, _, _ := setupTest(t)
 
 	response, err := authService.RefreshToken("invalid-refresh-token")
 	assert.Nil(t, response)
@@ -182,7 +194,7 @@ func TestAuthService_RefreshToken_Invalid(t *testing.T) {
 }
 
 func TestAuthService_Logout(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	// First login to get tokens
@@ -202,7 +214,7 @@ func TestAuthService_Logout(t *testing.T) {
 }
 
 func TestAuthService_Register_Success(t *testing.T) {
-	authService, _, _, _ := setupTest(t)
+	authService, _, _, _, _ := setupTest(t)
 
 	user, err := authService.Register("newuser", "new@example.com", "password123", "New User")
 
@@ -216,7 +228,7 @@ func TestAuthService_Register_Success(t *testing.T) {
 }
 
 func TestAuthService_Register_DuplicateUser(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, _, db := setupTest(t)
 	_ = createTestUser(t, db)
 
 	// Try to register with same username
@@ -233,7 +245,7 @@ func TestAuthService_Register_DuplicateUser(t *testing.T) {
 }
 
 func TestAuthService_RequestPasswordReset(t *testing.T) {
-	authService, _, _, db := setupTest(t)
+	authService, _, _, mockEmailService, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	err := authService.RequestPasswordReset(user.Email)
@@ -245,10 +257,18 @@ func TestAuthService_RequestPasswordReset(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, updatedUser.ResetToken)
 	assert.False(t, updatedUser.ResetTokenExpiry.IsZero())
+
+	// Verify that email was sent
+	sentEmails := mockEmailService.GetSentEmails()
+	require.Len(t, sentEmails, 1)
+	assert.Equal(t, user.Email, sentEmails[0].To)
+	assert.Equal(t, user.Username, sentEmails[0].Username)
+	assert.Equal(t, user.DisplayName, sentEmails[0].DisplayName)
+	assert.NotEmpty(t, sentEmails[0].Token)
 }
 
 func TestAuthService_ResetPassword_Success(t *testing.T) {
-	authService, _, tokenService, db := setupTest(t)
+	authService, _, tokenService, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	// Request password reset to get a valid token
@@ -289,7 +309,7 @@ func TestAuthService_ResetPassword_Success(t *testing.T) {
 }
 
 func TestAuthService_ResetPassword_InvalidToken(t *testing.T) {
-	authService, _, _, _ := setupTest(t)
+	authService, _, _, _, _ := setupTest(t)
 
 	err := authService.ResetPassword("invalid.token", "newpassword123")
 	assert.ErrorIs(t, err, ErrInvalidToken)

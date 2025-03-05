@@ -4,11 +4,13 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"gosveltekit/internal/auth"
+	"gosveltekit/internal/email"
 	"gosveltekit/internal/models"
 	"gosveltekit/internal/repository"
 
@@ -35,14 +37,16 @@ type AuthServiceInterface interface {
 type AuthService struct {
 	userRepo            *repository.UserRepository
 	tokenService        *auth.TokenService
+	emailService        email.EmailServiceInterface
 	failedLoginAttempts map[string]int
 	failedLoginMutex    sync.RWMutex
 }
 
-func NewAuthService(userRepo *repository.UserRepository, tokenService *auth.TokenService) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, tokenService *auth.TokenService, emailService email.EmailServiceInterface) *AuthService {
 	return &AuthService{
 		userRepo:            userRepo,
 		tokenService:        tokenService,
+		emailService:        emailService,
 		failedLoginAttempts: make(map[string]int),
 	}
 }
@@ -224,12 +228,23 @@ func (s *AuthService) RequestPasswordReset(email string) error {
 		return err
 	}
 
-	// Enviar email com link de recuperação
-	// O token plaintext é usado para o link de recuperação
-	// Temporarily log the token for development purposes
-	_ = plaintextToken // TODO: Implement email service to send reset link
-	// resetLink := fmt.Sprintf("https://seu-app.com/reset-password?token=%s", plaintextToken)
-	// emailService.SendPasswordResetEmail(user.Email, resetLink)
+	// Enviar email com link de recuperação usando o serviço de email
+	displayName := user.DisplayName
+	if displayName == "" {
+		displayName = user.Username
+	}
+
+	// Enviar o email com o link de recuperação
+	if err := s.emailService.SendPasswordResetEmail(
+		user.Email,
+		plaintextToken,
+		user.Username,
+		displayName,
+	); err != nil {
+		// Log the error but don't return it to avoid revealing if the email exists
+		// In a production environment, this should be logged properly
+		fmt.Printf("Erro ao enviar email de recuperação: %v\n", err)
+	}
 
 	return nil
 }

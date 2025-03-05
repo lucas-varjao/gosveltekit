@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"gosveltekit/internal/auth"
 	"gosveltekit/internal/config"
+	"gosveltekit/internal/email"
 	"gosveltekit/internal/handlers"
 	"gosveltekit/internal/models"
 	"gosveltekit/internal/repository"
@@ -42,11 +43,21 @@ func setupIntegrationTest(t *testing.T) (*gin.Engine, *gorm.DB) {
 			PasswordResetTTL: 1 * time.Hour,
 			Issuer:           "test-issuer",
 		},
+		Email: config.EmailConfig{
+			SMTPHost:     "smtp.example.com",
+			SMTPPort:     587,
+			SMTPUsername: "test@example.com",
+			SMTPPassword: "password",
+			FromEmail:    "noreply@example.com",
+			FromName:     "Test App",
+			ResetURL:     "http://localhost:3000/reset-password?token=",
+		},
 	}
 
 	userRepo := repository.NewUserRepository(db)
 	tokenService := auth.NewTokenService(cfg)
-	authService := service.NewAuthService(userRepo, tokenService)
+	emailService := email.NewMockEmailService() // Use mock for testing
+	authService := service.NewAuthService(userRepo, tokenService, emailService)
 	authHandler := handlers.NewAuthHandler(authService)
 
 	// Configurar router

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gosveltekit/internal/auth"
 	"gosveltekit/internal/config"
+	"gosveltekit/internal/email"
 	"gosveltekit/internal/handlers"
 	"gosveltekit/internal/models"
 	"gosveltekit/internal/repository"
@@ -42,7 +43,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	result := db.Where(models.User{Username: "admin"}).FirstOrCreate(&models.User{Username: "admin", Email: "admin@example.com", DisplayName: "Administrator", PasswordHash: string(passwordHash), Role: "admin"})
+	result := db.Where(models.User{Username: "admin"}).FirstOrCreate(&models.User{Username: "admin", Email: "onyx.views5004@eagereverest.com", DisplayName: "Administrator", PasswordHash: string(passwordHash), Role: "admin"})
 	if result.Error != nil {
 		fmt.Println(result.Error)
 	}
@@ -51,7 +52,8 @@ func main() {
 	// Inicializar serviços e repositórios
 	userRepo := repository.NewUserRepository(db)
 	tokenService := auth.NewTokenService(cfg)
-	authService := service.NewAuthService(userRepo, tokenService)
+	emailService := email.NewEmailService(cfg)
+	authService := service.NewAuthService(userRepo, tokenService, emailService)
 	authHandler := handlers.NewAuthHandler(authService)
 
 	r := router.SetupRouter(authHandler, tokenService)
