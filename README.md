@@ -10,25 +10,25 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 
 ### Backend (Golang)
 
--   Sistema de autenticação JWT completo
--   Banco de dados SQLite com migrations
--   Estrutura modular e escalável
--   Middleware de autenticação
--   API RESTful
+- Sistema de autenticação JWT completo
+- Banco de dados SQLite com migrations
+- Estrutura modular e escalável
+- Middleware de autenticação
+- API RESTful
 
 ### Frontend (SvelteKit)
 
--   Páginas de autenticação prontas (login, registro, recuperação de senha)
--   Gerenciamento de estado para autenticação
--   Layout responsivo básico
--   Interceptação de requisições para inclusão de tokens
+- Páginas de autenticação prontas (login, registro, recuperação de senha)
+- Gerenciamento de estado para autenticação
+- Layout responsivo básico
+- Interceptação de requisições para inclusão de tokens
 
 ## 🛠️ Pré-requisitos
 
--   Go 1.18+
--   Node.js 16+
--   npm ou pnpm
--   Docker e Docker Compose (opcional)
+- Go 1.18+
+- Node.js 16+
+- npm ou pnpm
+- Docker e Docker Compose (opcional)
 
 ## 🔧 Instalação e Uso
 
@@ -65,7 +65,7 @@ npm run dev
 
 ## 📁 Estrutura do Projeto
 
-```
+```bash
 gosveltekit/
 ├── backend/               # Aplicação Golang
 │   ├── cmd/api/           # Ponto de entrada
