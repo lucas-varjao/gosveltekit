@@ -2,8 +2,9 @@
 
 <script lang="ts">
     import { slide } from 'svelte/transition';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { goto } from '$app/navigation';
+	import { authApi } from '$lib/api/auth';
 
     // State declaration using Svelte 5 runes
     let password = $state('');
@@ -31,7 +32,7 @@
 
     // Get token from URL when page loads
     $effect(() => {
-        token = $page.url.searchParams.get('token') || '';
+        token = page.url.searchParams.get('token') || '';
         
         // Redirect if no token is provided
         if (!token) {
@@ -140,25 +141,7 @@
             try {
                 isLoading = true;
                 
-                // Simulate API call for now (will be connected to the backend later)
-                // The actual implementation would look like this:
-                //
-                // const response = await fetch('/api/auth/password-reset', {
-                //   method: 'POST',
-                //   headers: { 'Content-Type': 'application/json' },
-                //   body: JSON.stringify({ 
-                //     token,
-                //     new_password: password,
-                //     confirm_password: confirmPassword
-                //   })
-                // });
-                // 
-                // if (!response.ok) {
-                //   const data = await response.json();
-                //   throw new Error(data.error || 'Password reset failed');
-                // }
-                
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await authApi.resetPassword({ token, new_password: password, confirm_password: confirmPassword });
                 
                 // Show success message
                 resetSuccess = true;

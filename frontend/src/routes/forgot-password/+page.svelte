@@ -2,6 +2,7 @@
 
 <script lang="ts">
     import { slide } from 'svelte/transition';
+	import { authApi } from '$lib/api/auth';
 
     // State declaration using Svelte 5 runes
     let email = $state('');
@@ -51,21 +52,7 @@
             try {
                 isLoading = true;
                 
-                // Simulate API call for now (will be connected to the backend later)
-                // This would be the actual implementation:
-                //
-                // const response = await fetch('/api/auth/password-reset-request', {
-                //   method: 'POST',
-                //   headers: { 'Content-Type': 'application/json' },
-                //   body: JSON.stringify({ email })
-                // });
-                // 
-                // if (!response.ok) {
-                //   const data = await response.json();
-                //   throw new Error(data.error || 'Something went wrong');
-                // }
-                
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await authApi.requestPasswordReset({ email });
                 
                 // Show success message
                 success = true;
