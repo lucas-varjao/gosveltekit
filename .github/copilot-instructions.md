@@ -6,44 +6,72 @@ GoSvelteKit is a template/base project with a Golang backend and SvelteKit (Svel
 
 ## Backend Specifications
 
-- We use Golang with Gin for our web framework
-- Authentication is handled via JWT tokens
-- SQLite is our database of choice for simplicity and portability
-- We utilize GORM as our ORM for database operations
-- API documentation is generated using Swaggo
-- Structured logging is implemented with Zap
-- Configuration management is handled by Viper
+-   **Framework**: Golang with Gin
+-   **Authentication**: Session-based (pluggable adapters inspired by Lucia Auth)
+-   **Database**: SQLite (via GORM)
+-   **ORM**: GORM for database operations
+-   **API Docs**: Swaggo
+-   **Logging**: Zap
+-   **Config**: Viper
+
+### Authentication Architecture
+
+The auth system uses a pluggable adapter pattern:
+
+```
+internal/auth/
+├── interfaces.go      # UserAdapter, SessionAdapter interfaces
+├── auth_manager.go    # Central AuthManager
+└── adapter/gorm/      # GORM implementation
+```
+
+-   **Sessions** are stored in the database (not JWTs)
+-   Login returns `session_id` (not `access_token`/`refresh_token`)
+-   Auth via `Authorization: Bearer {session_id}` header or `session_id` cookie
 
 ## Frontend Specifications
 
-- SvelteKit (Svelte 5) is our frontend framework
-- We use TailwindCSS for styling with a utility-first approach
-- Bun is our JavaScript runtime and package manager
-- UI components are built with shadcn-svelte
-- Always use Svelte 5 with the new features for the frontend.
-- This project only uses dark mode.
+-   **Framework**: SvelteKit (Svelte 5)
+-   **Styling**: TailwindCSS (utility-first)
+-   **Runtime**: Bun
+-   **UI Components**: shadcn-svelte
+-   **Mode**: Dark mode only
+-   Always use Svelte 5 with the new runes API (`$state`, `$derived`, `$props`)
+
+### Auth Store
+
+```typescript
+// User fields are snake_case
+interface User {
+    id: string;
+    identifier: string; // username
+    email: string;
+    display_name: string;
+    role: string;
+    active: boolean;
+}
+```
 
 ## Design Preferences
 
-- Aim for a professional and minimalist design.
-- Incorporate basic animations for enhanced user experience.
-- Use `slate-950` as the primary background color.
+-   Professional and minimalist design
+-   Basic animations for enhanced UX
+-   `slate-950` as primary background color
 
 ## Code Style & Conventions
 
-- Backend Go code follows standard Go idioms and the project structure adheres to Go project layout best practices
-- Frontend TypeScript uses 4-space indentation and single quotes
-- Use correct TypeScript code
-- CSS is primarily written as Tailwind utility classes
-- Component files use .svelte extension and follow SvelteKit conventions
+-   Backend Go code follows standard Go idioms and project layout best practices
+-   Frontend TypeScript uses 4-space indentation and single quotes
+-   CSS is primarily written as Tailwind utility classes
+-   Component files use .svelte extension and follow SvelteKit conventions
 
 ## Development Workflow
 
-- The project uses a monorepo approach with backend and frontend in separate directories
-- Development requires running both backend and frontend servers concurrently
-- We follow Conventional Commits for commit messages
+-   Monorepo with `backend/` and `frontend/` directories
+-   Dev requires running both servers: `go run cmd/server/server.go` and `bun run dev`
+-   Follow Conventional Commits for commit messages
 
 ## Deployment
 
-- The project is designed to be easily deployable as Docker containers
-- Environment variables are used for configuration across different environments
+-   Docker containers for deployment
+-   Environment variables for configuration
