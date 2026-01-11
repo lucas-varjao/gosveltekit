@@ -33,7 +33,7 @@
 						<div class="h-4 w-4 animate-spin rounded-full border-4 border-slate-700 border-t-slate-300"></div>
 					{:else if isAuthenticated}
 						{#if user}
-							<span>{user.DisplayName} | </span>							
+							<span>{user.display_name} | </span>							
 						{/if}
 						<button onclick={handleLogout} class="text-slate-400 hover:text-white text-base">Sign Out</button>
 					{:else}

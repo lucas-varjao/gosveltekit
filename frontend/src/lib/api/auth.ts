@@ -1,6 +1,6 @@
 // frontend/src/lib/api/auth.ts
 
-import { apiRequest, setTokens, clearTokens } from './client';
+import { apiRequest, setSessionId, clearSession } from './client';
 
 export interface LoginRequest {
 	username: string;
@@ -14,16 +14,17 @@ export interface RegisterRequest {
 	display_name: string;
 }
 
+// Updated to match new session-based response from backend
 export interface AuthResponse {
-	access_token: string;
-	refresh_token: string;
+	session_id: string;
 	expires_at: string;
 	user: {
-		ID: number;
-		Username: string;
-		Email: string;
-		DisplayName: string;
-		Role: string;
+		id: string;
+		identifier: string;
+		email: string;
+		display_name: string;
+		role: string;
+		active: boolean;
 	};
 }
 
@@ -45,8 +46,8 @@ export const authApi = {
 			body: JSON.stringify(data)
 		});
 
-		// Store tokens on successful login
-		setTokens(response.access_token, response.refresh_token);
+		// Store session ID on successful login
+		setSessionId(response.session_id);
 		return response;
 	},
 
@@ -57,8 +58,8 @@ export const authApi = {
 			body: JSON.stringify(data)
 		});
 
-		// Store tokens on successful registration
-		setTokens(response.access_token, response.refresh_token);
+		// Store session ID on successful registration
+		setSessionId(response.session_id);
 		return response;
 	},
 
@@ -67,7 +68,7 @@ export const authApi = {
 		try {
 			await apiRequest('/api/logout', { method: 'POST' });
 		} finally {
-			clearTokens();
+			clearSession();
 		}
 	},
 
@@ -85,5 +86,10 @@ export const authApi = {
 			method: 'POST',
 			body: JSON.stringify(data)
 		});
+	},
+
+	// Get current user (new endpoint)
+	getCurrentUser: async () => {
+		return apiRequest<AuthResponse['user']>('/api/me', { method: 'GET' });
 	}
 };

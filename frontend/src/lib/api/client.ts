@@ -2,16 +2,15 @@
 
 /**
  * API Client for communicating with the backend
- * Handles authentication, request formatting, and error handling
+ * Handles session-based authentication, request formatting, and error handling
  */
 import { browser } from '$app/environment';
 
 // Base URL for API requests
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Token storage keys
-const ACCESS_TOKEN_KEY = 'accessToken';
-const REFRESH_TOKEN_KEY = 'refreshToken';
+// Session storage key
+const SESSION_ID_KEY = 'sessionId';
 
 // Error types
 export class ApiError extends Error {
@@ -24,44 +23,37 @@ export class ApiError extends Error {
 	}
 }
 
-// Token management
-export const getAccessToken = (): string | null => {
+// Session management
+export const getSessionId = (): string | null => {
 	if (!browser) return null;
-	return localStorage.getItem(ACCESS_TOKEN_KEY);
+	return localStorage.getItem(SESSION_ID_KEY);
 };
 
-export const getRefreshToken = (): string | null => {
-	if (!browser) return null;
-	return localStorage.getItem(REFRESH_TOKEN_KEY);
-};
-
-export const setTokens = (accessToken: string, refreshToken: string): void => {
+export const setSessionId = (sessionId: string): void => {
 	if (!browser) return;
-	localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-	localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+	localStorage.setItem(SESSION_ID_KEY, sessionId);
 };
 
-export const clearTokens = (): void => {
+export const clearSession = (): void => {
 	if (!browser) return;
-	localStorage.removeItem(ACCESS_TOKEN_KEY);
-	localStorage.removeItem(REFRESH_TOKEN_KEY);
+	localStorage.removeItem(SESSION_ID_KEY);
 };
 
-// API request function with automatic token handling
+// API request function with automatic session handling
 export async function apiRequest<T = unknown>(
 	endpoint: string,
 	options: RequestInit = {}
 ): Promise<T> {
 	const url = `${API_BASE_URL}${endpoint}`;
-	const accessToken = getAccessToken();
+	const sessionId = getSessionId();
 
 	// Set default headers
 	const headers = new Headers(options.headers);
 	headers.set('Content-Type', 'application/json');
 
-	// Add authorization header if token exists
-	if (accessToken) {
-		headers.set('Authorization', `Bearer ${accessToken}`);
+	// Add authorization header if session exists
+	if (sessionId) {
+		headers.set('Authorization', `Bearer ${sessionId}`);
 	}
 
 	// Create request with headers
@@ -73,19 +65,19 @@ export async function apiRequest<T = unknown>(
 	try {
 		const response = await fetch(url, request);
 
-		// Handle 401 Unauthorized - attempt token refresh
-		if (response.status === 401 && getRefreshToken()) {
-			const newToken = await refreshAccessToken();
-			if (newToken) {
-				// Retry the request with new token
-				headers.set('Authorization', `Bearer ${newToken}`);
-				const retryResponse = await fetch(url, { ...request, headers });
-				return handleResponse(retryResponse);
+		// Handle 401 Unauthorized - session expired or invalid
+		if (response.status === 401) {
+			clearSession();
+			// Optionally redirect to login
+			if (browser) {
+				window.location.href = '/login';
 			}
+			throw new ApiError('Session expired', 401);
 		}
 
 		return handleResponse(response);
 	} catch (error) {
+		if (error instanceof ApiError) throw error;
 		console.error('API request failed:', error);
 		throw new ApiError('Network error', 0);
 	}
@@ -101,30 +93,4 @@ async function handleResponse<T>(response: Response): Promise<T> {
 	}
 
 	return data as T;
-}
-
-// Refresh the access token
-async function refreshAccessToken(): Promise<string | null> {
-	const refreshToken = getRefreshToken();
-	if (!refreshToken) return null;
-
-	try {
-		const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ refresh_token: refreshToken })
-		});
-
-		if (!response.ok) {
-			clearTokens();
-			return null;
-		}
-
-		const data = await response.json();
-		setTokens(data.access_token, data.refresh_token);
-		return data.access_token;
-	} catch {
-		clearTokens();
-		return null;
-	}
 }

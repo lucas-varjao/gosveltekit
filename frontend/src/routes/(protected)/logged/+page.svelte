@@ -4,7 +4,7 @@
 	import { authStore } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';	
 	import { onMount } from 'svelte';
-	import { apiRequest, getAccessToken } from '$lib/api/client';
+	import { apiRequest, getSessionId } from '$lib/api/client';
 
 	// User data from auth store
 	let user = $derived($authStore.user);
@@ -18,11 +18,9 @@
 
 	async function fetchData() {
 		try {
+			// Session ID is automatically added by apiRequest
 			const response = await apiRequest<Data>('/api/protected', {
-				method: 'GET',
-				headers: {
-					'Authorization': `Bearer ${getAccessToken()}`
-				}
+				method: 'GET'
 			})
 
 			console.log(response);
@@ -80,27 +78,27 @@
 				<div class="space-y-3">
 					<div class="flex justify-between">
 						<span class="text-slate-400">Username:</span>
-						<span class="font-medium">{user.Username}</span>
+						<span class="font-medium">{user.identifier}</span>
 					</div>
 					
 					<div class="flex justify-between">
 						<span class="text-slate-400">Display Name:</span>
-						<span class="font-medium">{user.DisplayName}</span>
+						<span class="font-medium">{user.display_name}</span>
 					</div>
 					
 					<div class="flex justify-between">
 						<span class="text-slate-400">Email:</span>
-						<span class="font-medium">{user.Email}</span>
+						<span class="font-medium">{user.email}</span>
 					</div>
 					
 					<div class="flex justify-between">
 						<span class="text-slate-400">Role:</span>
-						<span class="font-medium">{user.Role}</span>
+						<span class="font-medium">{user.role}</span>
 					</div>
 					
 					<div class="flex justify-between">
 						<span class="text-slate-400">User ID:</span>
-						<span class="font-medium">{user.ID}</span>
+						<span class="font-medium">{user.id}</span>
 					</div>
 					<p class="text-slate-400">Data from backend: {data?.message}</p>
 				</div>

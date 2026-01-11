@@ -2,17 +2,21 @@
 
 /**
  * Authentication store for managing user state
+ * Uses session-based authentication
  */
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { authApi } from '$lib/api/auth';
+import { authApi, type AuthResponse } from '$lib/api/auth';
+import { getSessionId, clearSession } from '$lib/api/client';
 
+// User interface matching new backend response
 export interface User {
-	ID: number;
-	Username: string;
-	Email: string;
-	DisplayName: string;
-	Role: string;
+	id: string;
+	identifier: string; // username
+	email: string;
+	display_name: string;
+	role: string;
+	active: boolean;
 }
 
 interface AuthState {
@@ -37,23 +41,29 @@ function createAuthStore() {
 	return {
 		subscribe,
 
-		// Initialize auth state from localStorage
+		// Initialize auth state - check if we have a valid session
 		init: async () => {
 			if (!browser) return;
 
 			update((state) => ({ ...state, isLoading: true }));
 
 			try {
-				// Check if we have a stored user
-				const userJson = localStorage.getItem('user');
-				if (userJson) {
-					const user = JSON.parse(userJson);
-					update((state) => ({
-						...state,
-						user,
-						isAuthenticated: true,
-						isLoading: false
-					}));
+				const sessionId = getSessionId();
+				if (sessionId) {
+					// Try to fetch current user to validate session
+					try {
+						const user = await authApi.getCurrentUser();
+						update((state) => ({
+							...state,
+							user,
+							isAuthenticated: true,
+							isLoading: false
+						}));
+					} catch {
+						// Session invalid, clear it
+						clearSession();
+						update((state) => ({ ...state, isLoading: false }));
+					}
 				} else {
 					update((state) => ({ ...state, isLoading: false }));
 				}
@@ -69,11 +79,6 @@ function createAuthStore() {
 
 			try {
 				const response = await authApi.login({ username, password });
-
-				// Store user data
-				if (browser) {
-					localStorage.setItem('user', JSON.stringify(response.user));
-				}
 
 				update((state) => ({
 					...state,
@@ -111,11 +116,6 @@ function createAuthStore() {
 					display_name: data.display_name
 				});
 
-				// Store user data
-				if (browser) {
-					localStorage.setItem('user', JSON.stringify(response.user));
-				}
-
 				update((state) => ({
 					...state,
 					user: response.user,
@@ -142,11 +142,6 @@ function createAuthStore() {
 			try {
 				await authApi.logout();
 			} finally {
-				// Clear user data
-				if (browser) {
-					localStorage.removeItem('user');
-				}
-
 				update((state) => ({
 					...state,
 					user: null,
@@ -154,6 +149,11 @@ function createAuthStore() {
 					isLoading: false
 				}));
 			}
+		},
+
+		// Clear error
+		clearError: () => {
+			update((state) => ({ ...state, error: null }));
 		}
 	};
 }
