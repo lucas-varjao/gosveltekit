@@ -1,5 +1,4 @@
-// backend/internal/middleware/auth.go
-
+// Package middleware provides HTTP middleware for the Gin router.
 package middleware
 
 import (
@@ -11,94 +10,135 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware creates a Gin middleware for JWT authentication.
+const (
+	// SessionCookieName is the name of the session cookie
+	SessionCookieName = "session_id"
+	// SessionHeaderName is the name of the session header (for API clients)
+	SessionHeaderName = "X-Session-ID"
+)
+
+// AuthMiddleware creates a Gin middleware for session-based authentication.
 //
-// It validates the Authorization header containing a JWT token and extracts
-// user information from the token claims. The middleware expects the header
-// format "Bearer {token}". If validation succeeds, it adds the user ID and role
-// to the request context for use by subsequent request handlers.
+// It looks for a session ID in either:
+// 1. The Authorization header (format: "Bearer {session_id}")
+// 2. The X-Session-ID header
+// 3. A cookie named "session_id"
 //
-// Parameters:
-//   - tokenService: A pointer to auth.TokenService used to validate tokens
-//
-// Returns:
-//   - gin.HandlerFunc: A middleware function that can be used with Gin router
-//
-// Authentication failures result in:
-//   - 401 Unauthorized: When header is missing or malformed
-//   - 401 Unauthorized: When token is invalid or expired (with specific error messages)
-func AuthMiddleware(tokenService *auth.TokenService) gin.HandlerFunc {
-	return func(context *gin.Context) {
-		authHeader := context.GetHeader("Authorization")
-		if authHeader == "" {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "autorização necessária"})
+// If validation succeeds, it adds user info to the request context.
+func AuthMiddleware(authManager *auth.AuthManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		sessionID := extractSessionID(c)
+		if sessionID == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "autorização necessária"})
 			return
 		}
 
-		// Formato: "Bearer {token}"
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "formato inválido"})
-			return
-		}
-
-		tokenString := parts[1]
-		claims, err := tokenService.ValidateToken(tokenString)
+		session, user, err := authManager.ValidateSession(sessionID)
 		if err != nil {
 			status := http.StatusUnauthorized
-			message := "token inválido"
+			message := "sessão inválida"
 
-			if err == auth.ErrExpiredToken {
-				message = "token expirado"
+			switch {
+			case err == auth.ErrSessionExpired:
+				message = "sessão expirada"
+			case err == auth.ErrSessionNotFound:
+				message = "sessão não encontrada"
+			case err == auth.ErrUserNotActive:
+				message = "usuário inativo"
 			}
 
-			context.AbortWithStatusJSON(status, gin.H{"error": message})
+			c.AbortWithStatusJSON(status, gin.H{"error": message})
 			return
 		}
 
-		// Armazena os claims no contexto para uso posterior
-		context.Set("userID", claims.UserID)
-		context.Set("role", claims.Role)
-		context.Set("accessToken", tokenString)
+		// Store user info in context
+		c.Set("userID", user.ID)
+		c.Set("role", user.Role)
+		c.Set("user", user)
+		c.Set("session", session)
+		c.Set("sessionID", sessionID)
 
-		context.Next()
+		// If session was refreshed, update the cookie
+		if session.Fresh && c.Request.Method != http.MethodOptions {
+			setSessionCookie(c, sessionID, session.ExpiresAt)
+		}
+
+		c.Next()
 	}
 }
 
-// Middleware opcional para verificar roles
-// RoleMiddleware creates a new Gin middleware to verify that the current user's role
-// matches at least one of the required roles. This middleware expects the user's role
-// to be already set in the Gin context with the key "role" (typically by a previous
-// authentication middleware).
+// RoleMiddleware creates a middleware to verify user roles.
 //
-// Parameters:
-//   - roles: A variadic list of role names that are allowed to access the protected route.
-//
-// Returns:
-//   - A Gin middleware function that:
-//   - Returns 401 Unauthorized if no role is found in the context
-//   - Returns 403 Forbidden if the user's role doesn't match any of the required roles
-//   - Calls context.Next() if the user's role matches any of the required roles
-//
-// Usage example:
-//
-//	router.GET("/admin", RoleMiddleware("admin"), adminHandler)
-//	router.GET("/api", RoleMiddleware("admin", "user"), apiHandler)
+// It expects the user's role to be set in the context by AuthMiddleware.
 func RoleMiddleware(roles ...string) gin.HandlerFunc {
-	return func(context *gin.Context) {
-		userRole, exists := context.Get("role")
+	return func(c *gin.Context) {
+		userRole, exists := c.Get("role")
 		if !exists {
-			context.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "usuário não autenticado"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "usuário não autenticado"})
 			return
 		}
 
 		for _, role := range roles {
 			if role == userRole {
-				context.Next()
+				c.Next()
 				return
 			}
 		}
 
-		context.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "acesso negado"})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "acesso negado"})
 	}
+}
+
+// extractSessionID extracts the session ID from the request.
+// Priority: Authorization header > X-Session-ID header > Cookie
+func extractSessionID(c *gin.Context) string {
+	// Try Authorization header first (for API clients)
+	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			return parts[1]
+		}
+	}
+
+	// Try X-Session-ID header
+	if sessionID := c.GetHeader(SessionHeaderName); sessionID != "" {
+		return sessionID
+	}
+
+	// Try cookie
+	if cookie, err := c.Cookie(SessionCookieName); err == nil {
+		return cookie
+	}
+
+	return ""
+}
+
+// setSessionCookie sets the session cookie in the response
+func setSessionCookie(c *gin.Context, sessionID string, expiresAt interface{}) {
+	// Calculate max age in seconds
+	maxAge := 30 * 24 * 60 * 60 // 30 days default
+
+	c.SetCookie(
+		SessionCookieName,
+		sessionID,
+		maxAge,
+		"/",
+		"",   // domain - empty means current domain
+		true, // secure - only send over HTTPS
+		true, // httpOnly - not accessible via JavaScript
+	)
+}
+
+// ClearSessionCookie removes the session cookie
+func ClearSessionCookie(c *gin.Context) {
+	c.SetCookie(
+		SessionCookieName,
+		"",
+		-1, // negative max age deletes the cookie
+		"/",
+		"",
+		true,
+		true,
+	)
 }

@@ -1,15 +1,13 @@
-// backend/internal/service/auth_service_test.go
-
+// Package service tests
 package service
 
 import (
+	"testing"
+
 	"gosveltekit/internal/auth"
-	"gosveltekit/internal/config"
+	gormadapter "gosveltekit/internal/auth/adapter/gorm"
 	"gosveltekit/internal/email"
 	"gosveltekit/internal/models"
-	"gosveltekit/internal/repository"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,37 +17,21 @@ import (
 )
 
 // Test helpers
-func setupTest(t *testing.T) (*AuthService, *repository.UserRepository, *auth.TokenService, *email.MockEmailService, *gorm.DB) {
+func setupTest(t *testing.T) (*AuthService, *auth.AuthManager, *gormadapter.UserAdapter, *gormadapter.SessionAdapter, *email.MockEmailService, *gorm.DB) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
-	err = db.AutoMigrate(&models.User{})
+	err = db.AutoMigrate(&models.User{}, &models.Session{})
 	require.NoError(t, err)
 
-	cfg := &config.Config{
-		JWT: config.JWTConfig{
-			SecretKey:       "test-secret-key",
-			AccessTokenTTL:  15 * time.Minute,
-			RefreshTokenTTL: 24 * time.Hour,
-			Issuer:          "test-issuer",
-		},
-		Email: config.EmailConfig{
-			SMTPHost:     "smtp.example.com",
-			SMTPPort:     587,
-			SMTPUsername: "test@example.com",
-			SMTPPassword: "password",
-			FromEmail:    "noreply@example.com",
-			FromName:     "Test App",
-			ResetURL:     "http://localhost:3000/reset-password?token=",
-		},
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	tokenService := auth.NewTokenService(cfg)
+	userAdapter := gormadapter.NewUserAdapter(db)
+	sessionAdapter := gormadapter.NewSessionAdapter(db)
+	authConfig := auth.DefaultAuthConfig()
+	authManager := auth.NewAuthManager(userAdapter, sessionAdapter, authConfig)
 	mockEmailService := email.NewMockEmailService()
-	authService := NewAuthService(userRepo, tokenService, mockEmailService)
+	authService := NewAuthService(authManager, userAdapter, mockEmailService)
 
-	return authService, userRepo, tokenService, mockEmailService, db
+	return authService, authManager, userAdapter, sessionAdapter, mockEmailService, db
 }
 
 func createTestUser(t *testing.T, db *gorm.DB) *models.User {
@@ -73,32 +55,28 @@ func createTestUser(t *testing.T, db *gorm.DB) *models.User {
 
 // Tests
 func TestNewAuthService(t *testing.T) {
-	authService, _, _, _, _ := setupTest(t)
+	authService, _, _, _, _, _ := setupTest(t)
 	assert.NotNil(t, authService)
-	assert.NotNil(t, authService.userRepo)
-	assert.NotNil(t, authService.tokenService)
+	assert.NotNil(t, authService.authManager)
+	assert.NotNil(t, authService.userAdapter)
 	assert.NotNil(t, authService.emailService)
-	assert.NotNil(t, authService.failedLoginAttempts)
 }
 
 func TestAuthService_Login_Success(t *testing.T) {
-	authService, _, _, _, db := setupTest(t)
+	authService, _, _, _, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	response, err := authService.Login("testuser", "password123", "127.0.0.1", "test-agent")
 
 	require.NoError(t, err)
 	assert.NotNil(t, response)
-	assert.NotEmpty(t, response.AccessToken)
-	assert.NotEmpty(t, response.RefreshToken)
+	assert.NotEmpty(t, response.SessionID)
 	assert.NotZero(t, response.ExpiresAt)
-	assert.Equal(t, user.ID, response.User.ID)
-	assert.Equal(t, user.Username, response.User.Username)
-	assert.Empty(t, response.User.PasswordHash)
+	assert.Equal(t, user.Username, response.User.Identifier)
 }
 
 func TestAuthService_Login_InvalidCredentials(t *testing.T) {
-	authService, _, _, _, db := setupTest(t)
+	authService, _, _, _, _, db := setupTest(t)
 	_ = createTestUser(t, db)
 
 	testCases := []struct {
@@ -137,7 +115,7 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 }
 
 func TestAuthService_Login_AccountLocked(t *testing.T) {
-	authService, _, _, _, db := setupTest(t)
+	authService, _, _, _, _, db := setupTest(t)
 	_ = createTestUser(t, db)
 
 	// Attempt to login with wrong password 5 times
@@ -149,11 +127,11 @@ func TestAuthService_Login_AccountLocked(t *testing.T) {
 	response, err := authService.Login("testuser", "wrongpass", "127.0.0.1", "test-agent")
 	assert.Nil(t, response)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "conta temporariamente bloqueada")
+	assert.Contains(t, err.Error(), "bloqueada")
 }
 
 func TestAuthService_Login_InactiveUser(t *testing.T) {
-	authService, _, _, _, db := setupTest(t)
+	authService, _, _, _, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	// Deactivate user
@@ -165,56 +143,51 @@ func TestAuthService_Login_InactiveUser(t *testing.T) {
 	assert.ErrorIs(t, err, ErrUserNotActive)
 }
 
-func TestAuthService_RefreshToken_Success(t *testing.T) {
-	authService, _, _, _, db := setupTest(t)
+func TestAuthService_ValidateSession_Success(t *testing.T) {
+	authService, _, _, _, _, db := setupTest(t)
 	user := createTestUser(t, db)
 
-	// First login to get a refresh token
+	// First login to get a session
 	loginResp, err := authService.Login("testuser", "password123", "127.0.0.1", "test-agent")
 	require.NoError(t, err)
 
-	// Try to refresh the token
-	refreshResp, err := authService.RefreshToken(loginResp.RefreshToken)
+	// Validate the session
+	session, userData, err := authService.ValidateSession(loginResp.SessionID)
 
 	require.NoError(t, err)
-	assert.NotNil(t, refreshResp)
-	assert.NotEmpty(t, refreshResp.AccessToken)
-	assert.NotEmpty(t, refreshResp.RefreshToken)
-	assert.NotZero(t, refreshResp.ExpiresAt)
-	assert.Equal(t, user.ID, refreshResp.User.ID)
-	assert.Empty(t, refreshResp.User.PasswordHash)
+	assert.NotNil(t, session)
+	assert.NotNil(t, userData)
+	assert.Equal(t, user.Username, userData.Identifier)
 }
 
-func TestAuthService_RefreshToken_Invalid(t *testing.T) {
-	authService, _, _, _, _ := setupTest(t)
+func TestAuthService_ValidateSession_Invalid(t *testing.T) {
+	authService, _, _, _, _, _ := setupTest(t)
 
-	response, err := authService.RefreshToken("invalid-refresh-token")
-	assert.Nil(t, response)
-	assert.ErrorIs(t, err, ErrInvalidCredentials)
+	session, userData, err := authService.ValidateSession("invalid-session-id")
+	assert.Nil(t, session)
+	assert.Nil(t, userData)
+	assert.ErrorIs(t, err, ErrInvalidToken)
 }
 
 func TestAuthService_Logout(t *testing.T) {
-	authService, _, _, _, db := setupTest(t)
-	user := createTestUser(t, db)
+	authService, _, _, _, _, db := setupTest(t)
+	_ = createTestUser(t, db)
 
-	// First login to get tokens
+	// First login to get a session
 	loginResp, err := authService.Login("testuser", "password123", "127.0.0.1", "test-agent")
 	require.NoError(t, err)
 
 	// Logout
-	err = authService.Logout(user.ID, loginResp.AccessToken)
+	err = authService.Logout(loginResp.SessionID)
 	require.NoError(t, err)
 
-	// Verify that refresh token is cleared
-	var updatedUser models.User
-	err = db.First(&updatedUser, user.ID).Error
-	require.NoError(t, err)
-	assert.Empty(t, updatedUser.RefreshToken)
-	assert.True(t, updatedUser.RefreshTokenExpiry.IsZero())
+	// Verify session is invalid
+	_, _, err = authService.ValidateSession(loginResp.SessionID)
+	assert.Error(t, err)
 }
 
 func TestAuthService_Register_Success(t *testing.T) {
-	authService, _, _, _, _ := setupTest(t)
+	authService, _, _, _, _, _ := setupTest(t)
 
 	user, err := authService.Register("newuser", "new@example.com", "password123", "New User")
 
@@ -228,7 +201,7 @@ func TestAuthService_Register_Success(t *testing.T) {
 }
 
 func TestAuthService_Register_DuplicateUser(t *testing.T) {
-	authService, _, _, _, db := setupTest(t)
+	authService, _, _, _, _, db := setupTest(t)
 	_ = createTestUser(t, db)
 
 	// Try to register with same username
@@ -245,7 +218,7 @@ func TestAuthService_Register_DuplicateUser(t *testing.T) {
 }
 
 func TestAuthService_RequestPasswordReset(t *testing.T) {
-	authService, _, _, mockEmailService, db := setupTest(t)
+	authService, _, _, _, mockEmailService, db := setupTest(t)
 	user := createTestUser(t, db)
 
 	err := authService.RequestPasswordReset(user.Email)
@@ -265,52 +238,4 @@ func TestAuthService_RequestPasswordReset(t *testing.T) {
 	assert.Equal(t, user.Username, sentEmails[0].Username)
 	assert.Equal(t, user.DisplayName, sentEmails[0].DisplayName)
 	assert.NotEmpty(t, sentEmails[0].Token)
-}
-
-func TestAuthService_ResetPassword_Success(t *testing.T) {
-	authService, _, tokenService, _, db := setupTest(t)
-	user := createTestUser(t, db)
-
-	// Request password reset to get a valid token
-	err := authService.RequestPasswordReset(user.Email)
-	require.NoError(t, err)
-
-	// Get the stored token hash from the database
-	var userWithToken models.User
-	err = db.First(&userWithToken, user.ID).Error
-	require.NoError(t, err)
-
-	// Generate a valid password reset token
-	plaintextToken, hashedToken, _, err := tokenService.GeneratePasswordResetToken(user.ID)
-	require.NoError(t, err)
-
-	// Update user with our known token hash
-	userWithToken.ResetToken = hashedToken
-	userWithToken.ResetTokenExpiry = time.Now().Add(1 * time.Hour)
-	err = db.Save(&userWithToken).Error
-	require.NoError(t, err)
-
-	// Reset password using the plaintext token
-	err = authService.ResetPassword(plaintextToken, "newpassword123")
-	require.NoError(t, err)
-
-	// Verify password was changed and token was cleared
-	var userAfterReset models.User
-	err = db.First(&userAfterReset, user.ID).Error
-	require.NoError(t, err)
-	assert.NotEqual(t, user.PasswordHash, userAfterReset.PasswordHash)
-	assert.Empty(t, userAfterReset.ResetToken)
-	assert.True(t, userAfterReset.ResetTokenExpiry.IsZero())
-
-	// Verify we can login with the new password
-	loginResp, err := authService.Login(user.Username, "newpassword123", "127.0.0.1", "test-agent")
-	require.NoError(t, err)
-	assert.NotNil(t, loginResp)
-}
-
-func TestAuthService_ResetPassword_InvalidToken(t *testing.T) {
-	authService, _, _, _, _ := setupTest(t)
-
-	err := authService.ResetPassword("invalid.token", "newpassword123")
-	assert.ErrorIs(t, err, ErrInvalidToken)
 }

@@ -1,21 +1,22 @@
-// backend/internal/router/router.go
-
+// Package router sets up the HTTP routes for the application.
 package router
 
 import (
+	"net/http"
+	"time"
+
 	"gosveltekit/internal/auth"
 	"gosveltekit/internal/handlers"
 	"gosveltekit/internal/middleware"
-	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
 
+// SetupRouter configures all routes for the application
 func SetupRouter(
 	authHandler *handlers.AuthHandler,
-	tokenService *auth.TokenService,
+	authManager *auth.AuthManager,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -41,38 +42,38 @@ func SetupRouter(
 		})
 	})
 
-	// Limiter mais restritivo para rotas de autenticação (prevenção de força bruta)
+	// Rate limiter for auth routes (brute force prevention)
 	authLimiter := middleware.NewIPRateLimiter(rate.Limit(1), 3, time.Hour)
 
-	// Rotas públicas de autenticação
-	auth := r.Group("/auth")
-	auth.Use(middleware.RateLimitMiddleware(authLimiter))
+	// Public auth routes
+	authRoutes := r.Group("/auth")
+	authRoutes.Use(middleware.RateLimitMiddleware(authLimiter))
 	{
-		auth.POST("/login", authHandler.Login)
-		auth.POST("/refresh", authHandler.RefreshToken)
-		auth.POST("/register", authHandler.Register)
-		auth.POST("/password-reset-request", authHandler.RequestPasswordReset)
-		auth.POST("/password-reset", authHandler.ResetPassword)
+		authRoutes.POST("/login", authHandler.Login)
+		authRoutes.POST("/register", authHandler.Register)
+		authRoutes.POST("/password-reset-request", authHandler.RequestPasswordReset)
+		authRoutes.POST("/password-reset", authHandler.ResetPassword)
 	}
 
-	// Limiter para API normal (mais permissivo)
+	// Rate limiter for API (more permissive)
 	apiLimiter := middleware.NewIPRateLimiter(rate.Limit(10), 20, time.Hour)
 
-	// Rotas protegidas
+	// Protected routes
 	api := r.Group("/api")
 	api.Use(middleware.RateLimitMiddleware(apiLimiter))
-	api.Use(middleware.AuthMiddleware(tokenService))
+	api.Use(middleware.AuthMiddleware(authManager))
 	{
-		// Rota de teste protegida
+		// Test protected route
 		api.GET("/protected", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Esta é uma rota protegida",
 			})
 		})
 
+		api.GET("/me", authHandler.GetCurrentUser)
 		api.POST("/logout", authHandler.Logout)
 
-		// Rotas apenas para admin
+		// Admin only routes
 		admin := api.Group("/admin")
 		admin.Use(middleware.RoleMiddleware("admin"))
 		{

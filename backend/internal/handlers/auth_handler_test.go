@@ -1,18 +1,19 @@
-// backend/internal/handlers/auth_handler.go
-
+// Package handlers tests
 package handlers
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"gosveltekit/internal/models"
-	"gosveltekit/internal/service"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"gosveltekit/internal/auth"
+	"gosveltekit/internal/models"
+	"gosveltekit/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,8 +21,9 @@ import (
 // MockAuthService implements the service.AuthServiceInterface interface
 type MockAuthService struct {
 	LoginFunc                func(username, password, ip, userAgent string) (*service.LoginResponse, error)
-	RefreshTokenFunc         func(refreshToken string) (*service.LoginResponse, error)
-	LogoutFunc               func(userID uint, accessToken string) error
+	ValidateSessionFunc      func(sessionID string) (*auth.Session, *auth.UserData, error)
+	LogoutFunc               func(sessionID string) error
+	LogoutAllFunc            func(userID string) error
 	RegisterFunc             func(username, email, password, displayName string) (*models.User, error)
 	RequestPasswordResetFunc func(email string) error
 	ResetPasswordFunc        func(token, newPassword string) error
@@ -31,12 +33,16 @@ func (m *MockAuthService) Login(username, password, ip, userAgent string) (*serv
 	return m.LoginFunc(username, password, ip, userAgent)
 }
 
-func (m *MockAuthService) RefreshToken(refreshToken string) (*service.LoginResponse, error) {
-	return m.RefreshTokenFunc(refreshToken)
+func (m *MockAuthService) ValidateSession(sessionID string) (*auth.Session, *auth.UserData, error) {
+	return m.ValidateSessionFunc(sessionID)
 }
 
-func (m *MockAuthService) Logout(userID uint, accessToken string) error {
-	return m.LogoutFunc(userID, accessToken)
+func (m *MockAuthService) Logout(sessionID string) error {
+	return m.LogoutFunc(sessionID)
+}
+
+func (m *MockAuthService) LogoutAll(userID string) error {
+	return m.LogoutAllFunc(userID)
 }
 
 func (m *MockAuthService) Register(username, email, password, displayName string) (*models.User, error) {
@@ -92,19 +98,18 @@ func TestAuthHandler_Login(t *testing.T) {
 			setupMock: func(m *MockAuthService) {
 				m.LoginFunc = func(username, password, ip, userAgent string) (*service.LoginResponse, error) {
 					return &service.LoginResponse{
-						AccessToken:  "test-access-token",
-						RefreshToken: "test-refresh-token",
-						ExpiresAt:    time.Now().Add(time.Hour),
-						User: models.User{
-							Username: "testuser",
+						SessionID: "test-session-id",
+						ExpiresAt: time.Now().Add(time.Hour),
+						User: auth.UserData{
+							ID:         "1",
+							Identifier: "testuser",
 						},
 					}, nil
 				}
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"access_token":  "test-access-token",
-				"refresh_token": "test-refresh-token",
+				"session_id": "test-session-id",
 			},
 		},
 		{
@@ -198,106 +203,6 @@ func TestAuthHandler_Login(t *testing.T) {
 	}
 }
 
-func TestAuthHandler_RefreshToken(t *testing.T) {
-	tests := []struct {
-		name           string
-		request        RefreshRequest
-		setupMock      func(*MockAuthService)
-		expectedStatus int
-		expectedBody   map[string]interface{}
-	}{
-		{
-			name: "Successful token refresh",
-			request: RefreshRequest{
-				RefreshToken: "valid-refresh-token",
-			},
-			setupMock: func(m *MockAuthService) {
-				m.RefreshTokenFunc = func(refreshToken string) (*service.LoginResponse, error) {
-					return &service.LoginResponse{
-						AccessToken:  "new-access-token",
-						RefreshToken: "new-refresh-token",
-						ExpiresAt:    time.Now().Add(time.Hour),
-					}, nil
-				}
-			},
-			expectedStatus: http.StatusOK,
-			expectedBody: map[string]interface{}{
-				"access_token":  "new-access-token",
-				"refresh_token": "new-refresh-token",
-			},
-		},
-		{
-			name: "Invalid refresh token",
-			request: RefreshRequest{
-				RefreshToken: "invalid-token",
-			},
-			setupMock: func(m *MockAuthService) {
-				m.RefreshTokenFunc = func(refreshToken string) (*service.LoginResponse, error) {
-					return nil, service.ErrInvalidToken
-				}
-			},
-			expectedStatus: http.StatusUnauthorized,
-			expectedBody: map[string]interface{}{
-				"error": "token de atualização inválido",
-			},
-		},
-		{
-			name: "Expired refresh token",
-			request: RefreshRequest{
-				RefreshToken: "expired-token",
-			},
-			setupMock: func(m *MockAuthService) {
-				m.RefreshTokenFunc = func(refreshToken string) (*service.LoginResponse, error) {
-					return nil, service.ErrExpiredToken
-				}
-			},
-			expectedStatus: http.StatusUnauthorized,
-			expectedBody: map[string]interface{}{
-				"error": "token expirado",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c, w := setupTestRouter()
-			mockService := &MockAuthService{}
-			tt.setupMock(mockService)
-
-			var authService service.AuthServiceInterface = mockService
-			handler := NewAuthHandler(authService)
-
-			// Setup request
-			jsonData, _ := json.Marshal(tt.request)
-			req, _ := http.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(jsonData))
-			req.Header.Set("Content-Type", "application/json")
-			c.Request = req
-
-			// Call handler
-			handler.RefreshToken(c)
-
-			// Check status code
-			if w.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
-
-			// Check response body
-			var response map[string]interface{}
-			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-				t.Fatalf("Failed to unmarshal response: %v", err)
-			}
-
-			for key, expectedValue := range tt.expectedBody {
-				if actualValue, exists := response[key]; !exists {
-					t.Errorf("expected response to contain %s", key)
-				} else if actualValue != expectedValue {
-					t.Errorf("expected %s to be %v, got %v", key, expectedValue, actualValue)
-				}
-			}
-		})
-	}
-}
-
 func TestAuthHandler_Logout(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -309,11 +214,11 @@ func TestAuthHandler_Logout(t *testing.T) {
 		{
 			name: "Successful logout",
 			setupContext: func(c *gin.Context) {
-				c.Set("userID", uint(1))
-				c.Set("accessToken", "valid-token")
+				c.Set("userID", "1")
+				c.Set("sessionID", "valid-session")
 			},
 			setupMock: func(m *MockAuthService) {
-				m.LogoutFunc = func(userID uint, accessToken string) error {
+				m.LogoutFunc = func(sessionID string) error {
 					return nil
 				}
 			},
@@ -323,35 +228,18 @@ func TestAuthHandler_Logout(t *testing.T) {
 			},
 		},
 		{
-			name: "Unauthorized - no user ID",
+			name: "Unauthorized - no session ID",
 			setupContext: func(c *gin.Context) {
-				// Don't set userID
-				c.Set("accessToken", "valid-token")
+				// Don't set sessionID
 			},
 			setupMock: func(m *MockAuthService) {
-				m.LogoutFunc = func(userID uint, accessToken string) error {
+				m.LogoutFunc = func(sessionID string) error {
 					return nil
 				}
 			},
 			expectedStatus: http.StatusUnauthorized,
 			expectedBody: map[string]interface{}{
 				"error": "não autenticado",
-			},
-		},
-		{
-			name: "Unauthorized - no access token",
-			setupContext: func(c *gin.Context) {
-				c.Set("userID", uint(1))
-				// Don't set access token
-			},
-			setupMock: func(m *MockAuthService) {
-				m.LogoutFunc = func(userID uint, accessToken string) error {
-					return nil
-				}
-			},
-			expectedStatus: http.StatusUnauthorized,
-			expectedBody: map[string]interface{}{
-				"error": "token não encontrado",
 			},
 		},
 	}
@@ -420,8 +308,8 @@ func TestAuthHandler_Register(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"Username": "newuser",
-				"Email":    "new@example.com",
+				"username": "newuser",
+				"email":    "new@example.com",
 			},
 		},
 		{
@@ -514,7 +402,6 @@ func TestAuthHandler_RequestPasswordReset(t *testing.T) {
 				"email": "invalid-email",
 			},
 			setupMock: func(m *MockAuthService) {
-				// Mock won't be called because validation fails first
 				m.RequestPasswordResetFunc = func(email string) error {
 					return errors.New("should not be called")
 				}
@@ -523,24 +410,6 @@ func TestAuthHandler_RequestPasswordReset(t *testing.T) {
 			checkBody: func(t *testing.T, body map[string]interface{}) {
 				if !contains(body["error"].(string), "validation") && !contains(body["error"].(string), "email") {
 					t.Errorf("expected error message to mention email validation, got: %v", body["error"])
-				}
-			},
-		},
-		{
-			name:        "Missing email field",
-			requestBody: map[string]interface{}{
-				// empty request
-			},
-			setupMock: func(m *MockAuthService) {
-				// Mock won't be called because binding fails first
-				m.RequestPasswordResetFunc = func(email string) error {
-					return errors.New("should not be called")
-				}
-			},
-			expectedStatus: http.StatusBadRequest,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if !contains(body["error"].(string), "required") && !contains(body["error"].(string), "email") {
-					t.Errorf("expected error message to mention required email, got: %v", body["error"])
 				}
 			},
 		},

@@ -1,11 +1,11 @@
-// backend/internal/repository/user_repository_test.go
-
+// Package repository tests
 package repository
 
 import (
-	"gosveltekit/internal/models"
 	"testing"
 	"time"
+
+	"gosveltekit/internal/models"
 
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
@@ -18,7 +18,6 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("failed to connect database: %v", err)
 	}
 
-	// Migrate the schema
 	err = db.AutoMigrate(&models.User{})
 	if err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
@@ -230,58 +229,6 @@ func TestUserRepository_FindByResetToken(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.want.ResetToken, got.ResetToken)
-				assert.Equal(t, tt.want.ID, got.ID)
-			}
-		})
-	}
-}
-
-func TestUserRepository_FindByRefreshToken(t *testing.T) {
-	db := setupTestDB(t)
-	repo := NewUserRepository(db)
-	testUser := createTestUser(t, db)
-
-	// Set refresh token
-	refreshToken := "valid-refresh-token"
-	testUser.RefreshToken = refreshToken
-	testUser.RefreshTokenExpiry = time.Now().Add(24 * time.Hour)
-	db.Save(testUser)
-
-	tests := []struct {
-		name    string
-		token   string
-		want    *models.User
-		wantErr bool
-	}{
-		{
-			name:    "valid token",
-			token:   refreshToken,
-			want:    testUser,
-			wantErr: false,
-		},
-		{
-			name:    "invalid token",
-			token:   "invalid-token",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "empty token",
-			token:   "",
-			want:    nil,
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := repo.FindByRefreshToken(tt.token)
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Nil(t, got)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want.RefreshToken, got.RefreshToken)
 				assert.Equal(t, tt.want.ID, got.ID)
 			}
 		})
