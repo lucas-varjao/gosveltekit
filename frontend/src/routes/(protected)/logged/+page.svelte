@@ -4,7 +4,7 @@
 	import { authStore } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';	
 	import { onMount } from 'svelte';
-	import { apiRequest, getSessionId } from '$lib/api/client';
+	import { apiRequest } from '$lib/api/client';
 
 	// User data from auth store
 	let user = $derived($authStore.user);

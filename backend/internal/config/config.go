@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const defaultMaxFailedAttempts = 5
+
 type ServerConfig struct {
 	Port int `mapstructure:"port"`
 }
@@ -17,12 +19,14 @@ type DatabaseConfig struct {
 	DSN string `mapstructure:"dsn"`
 }
 
-type JWTConfig struct {
-	SecretKey        string        `mapstructure:"secret-key"`
-	AccessTokenTTL   time.Duration `mapstructure:"access_token_ttl"`
-	RefreshTokenTTL  time.Duration `mapstructure:"refresh_token_ttl"`
-	PasswordResetTTL time.Duration `mapstructure:"password_reset_ttl"`
-	Issuer           string        `mapstructure:"issuer"`
+type AuthConfig struct {
+	SessionTTL        time.Duration `mapstructure:"session_ttl"`
+	RefreshThreshold  time.Duration `mapstructure:"refresh_threshold"`
+	MaxFailedAttempts int           `mapstructure:"max_failed_attempts"`
+	LockoutDuration   time.Duration `mapstructure:"lockout_duration"`
+	AllowHeaderAuth   bool          `mapstructure:"allow_header_auth"`
+	AllowCookieAuth   bool          `mapstructure:"allow_cookie_auth"`
+	CookieSecure      bool          `mapstructure:"cookie_secure"`
 }
 
 // EmailConfig contém configurações para envio de email
@@ -39,7 +43,7 @@ type EmailConfig struct {
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
+	Auth     AuthConfig     `mapstructure:"auth"`
 	Email    EmailConfig    `mapstructure:"email"`
 }
 
@@ -49,6 +53,13 @@ func LoadConfig() (*Config, error) {
 	viper.SetConfigName("app")
 	viper.SetConfigType("yml")
 	viper.AddConfigPath("./configs")
+	viper.SetDefault("auth.session_ttl", "720h")
+	viper.SetDefault("auth.refresh_threshold", "360h")
+	viper.SetDefault("auth.max_failed_attempts", defaultMaxFailedAttempts)
+	viper.SetDefault("auth.lockout_duration", "30m")
+	viper.SetDefault("auth.allow_header_auth", true)
+	viper.SetDefault("auth.allow_cookie_auth", true)
+	viper.SetDefault("auth.cookie_secure", false)
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("falha ao ler o arquivo de configuração: %w", err)

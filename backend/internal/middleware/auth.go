@@ -19,6 +19,22 @@ const (
 	SessionHeaderName = "X-Session-ID"
 )
 
+// AuthMiddlewareOptions controls which authentication channels are accepted.
+type AuthMiddlewareOptions struct {
+	AllowHeaderAuth bool
+	AllowCookieAuth bool
+	CookieSecure    bool
+}
+
+// DefaultAuthMiddlewareOptions provides defaults that support both channels.
+func DefaultAuthMiddlewareOptions() AuthMiddlewareOptions {
+	return AuthMiddlewareOptions{
+		AllowHeaderAuth: true,
+		AllowCookieAuth: true,
+		CookieSecure:    false,
+	}
+}
+
 // AuthMiddleware creates a Gin middleware for session-based authentication.
 //
 // It looks for a session ID in either:
@@ -27,9 +43,19 @@ const (
 // 3. A cookie named "session_id"
 //
 // If validation succeeds, it adds user info to the request context.
-func AuthMiddleware(authManager *auth.AuthManager) gin.HandlerFunc {
+func AuthMiddleware(authManager *auth.AuthManager, options ...AuthMiddlewareOptions) gin.HandlerFunc {
+	authOptions := DefaultAuthMiddlewareOptions()
+	if len(options) > 0 {
+		authOptions = options[0]
+	}
+	// Prevent a misconfiguration that would block all authenticated requests.
+	if !authOptions.AllowHeaderAuth && !authOptions.AllowCookieAuth {
+		authOptions.AllowHeaderAuth = true
+		authOptions.AllowCookieAuth = true
+	}
+
 	return func(c *gin.Context) {
-		sessionID := extractSessionID(c)
+		sessionID := extractSessionID(c, authOptions)
 		if sessionID == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "autorização necessária"})
 			return
@@ -61,8 +87,8 @@ func AuthMiddleware(authManager *auth.AuthManager) gin.HandlerFunc {
 		c.Set("sessionID", sessionID)
 
 		// If session was refreshed, update the cookie
-		if session.Fresh && c.Request.Method != http.MethodOptions {
-			setSessionCookie(c, sessionID, session.ExpiresAt)
+		if authOptions.AllowCookieAuth && session.Fresh && c.Request.Method != http.MethodOptions {
+			SetSessionCookie(c, sessionID, session.ExpiresAt, authOptions.CookieSecure)
 		}
 
 		c.Next()
@@ -93,31 +119,35 @@ func RoleMiddleware(roles ...string) gin.HandlerFunc {
 
 // extractSessionID extracts the session ID from the request.
 // Priority: Authorization header > X-Session-ID header > Cookie
-func extractSessionID(c *gin.Context) string {
-	// Try Authorization header first (for API clients)
-	authHeader := c.GetHeader("Authorization")
-	if authHeader != "" {
-		parts := strings.Split(authHeader, " ")
-		if len(parts) == 2 && parts[0] == "Bearer" {
-			return parts[1]
+func extractSessionID(c *gin.Context, options AuthMiddlewareOptions) string {
+	if options.AllowHeaderAuth {
+		// Try Authorization header first (for API clients)
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				return parts[1]
+			}
+		}
+
+		// Try X-Session-ID header
+		if sessionID := c.GetHeader(SessionHeaderName); sessionID != "" {
+			return sessionID
 		}
 	}
 
-	// Try X-Session-ID header
-	if sessionID := c.GetHeader(SessionHeaderName); sessionID != "" {
-		return sessionID
-	}
-
-	// Try cookie
-	if cookie, err := c.Cookie(SessionCookieName); err == nil {
-		return cookie
+	if options.AllowCookieAuth {
+		// Try cookie
+		if cookie, err := c.Cookie(SessionCookieName); err == nil {
+			return cookie
+		}
 	}
 
 	return ""
 }
 
-// setSessionCookie sets the session cookie in the response
-func setSessionCookie(c *gin.Context, sessionID string, expiresAt time.Time) {
+// SetSessionCookie sets the session cookie in the response.
+func SetSessionCookie(c *gin.Context, sessionID string, expiresAt time.Time, secure bool) {
 	// Keep a safe fallback for zero or already-expired values.
 	maxAge := 30 * 24 * 60 * 60
 	if !expiresAt.IsZero() {
@@ -132,21 +162,26 @@ func setSessionCookie(c *gin.Context, sessionID string, expiresAt time.Time) {
 		sessionID,
 		maxAge,
 		"/",
-		"",   // domain - empty means current domain
-		true, // secure - only send over HTTPS
+		"", // domain - empty means current domain
+		secure,
 		true, // httpOnly - not accessible via JavaScript
 	)
 }
 
 // ClearSessionCookie removes the session cookie
-func ClearSessionCookie(c *gin.Context) {
+func ClearSessionCookie(c *gin.Context, secure ...bool) {
+	cookieSecure := true
+	if len(secure) > 0 {
+		cookieSecure = secure[0]
+	}
+
 	c.SetCookie(
 		SessionCookieName,
 		"",
 		-1, // negative max age deletes the cookie
 		"/",
 		"",
-		true,
+		cookieSecure,
 		true,
 	)
 }

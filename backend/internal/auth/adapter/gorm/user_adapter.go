@@ -135,6 +135,15 @@ func (a *UserAdapter) FindByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
+// FindByResetTokenHash finds user by reset token hash.
+func (a *UserAdapter) FindByResetTokenHash(tokenHash string) (*models.User, error) {
+	var user models.User
+	if err := a.db.Where("reset_token = ?", tokenHash).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // UpdateUser saves changes to user model
 func (a *UserAdapter) UpdateUser(user *models.User) error {
 	return a.db.Save(user).Error

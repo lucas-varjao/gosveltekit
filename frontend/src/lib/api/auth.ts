@@ -1,6 +1,6 @@
 // frontend/src/lib/api/auth.ts
 
-import { apiRequest, setSessionId, clearSession } from './client';
+import { apiRequest } from './client';
 
 export interface LoginRequest {
 	username: string;
@@ -28,6 +28,15 @@ export interface AuthResponse {
 	};
 }
 
+export interface RegisterResponse {
+	id: number;
+	username: string;
+	email: string;
+	display_name: string;
+	role: string;
+	active: boolean;
+}
+
 export interface PasswordResetRequest {
 	email: string;
 }
@@ -41,35 +50,23 @@ export interface PasswordResetConfirmRequest {
 export const authApi = {
 	// Login user
 	login: async (data: LoginRequest): Promise<AuthResponse> => {
-		const response = await apiRequest<AuthResponse>('/auth/login', {
+		return apiRequest<AuthResponse>('/auth/login', {
 			method: 'POST',
 			body: JSON.stringify(data)
 		});
-
-		// Store session ID on successful login
-		setSessionId(response.session_id);
-		return response;
 	},
 
 	// Register new user
-	register: async (data: RegisterRequest): Promise<AuthResponse> => {
-		const response = await apiRequest<AuthResponse>('/auth/register', {
+	register: async (data: RegisterRequest): Promise<RegisterResponse> => {
+		return apiRequest<RegisterResponse>('/auth/register', {
 			method: 'POST',
 			body: JSON.stringify(data)
 		});
-
-		// Store session ID on successful registration
-		setSessionId(response.session_id);
-		return response;
 	},
 
 	// Logout user
 	logout: async (): Promise<void> => {
-		try {
-			await apiRequest('/api/logout', { method: 'POST' });
-		} finally {
-			clearSession();
-		}
+		await apiRequest('/api/logout', { method: 'POST' });
 	},
 
 	// Request password reset

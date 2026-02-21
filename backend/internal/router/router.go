@@ -24,7 +24,13 @@ const (
 func SetupRouter(
 	authHandler *handlers.AuthHandler,
 	authManager *auth.AuthManager,
+	options ...middleware.AuthMiddlewareOptions,
 ) *gin.Engine {
+	authOptions := middleware.DefaultAuthMiddlewareOptions()
+	if len(options) > 0 {
+		authOptions = options[0]
+	}
+
 	r := gin.Default()
 
 	// Add CORS middleware
@@ -74,7 +80,7 @@ func SetupRouter(
 	// Protected routes
 	api := r.Group("/api")
 	api.Use(middleware.RateLimitMiddleware(apiLimiter))
-	api.Use(middleware.AuthMiddleware(authManager))
+	api.Use(middleware.AuthMiddleware(authManager, authOptions))
 	// Test protected route
 	api.GET("/protected", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

@@ -6,162 +6,146 @@
  */
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
-import { authApi, type AuthResponse } from '$lib/api/auth';
-import { getSessionId, clearSession } from '$lib/api/client';
+import { authApi } from '$lib/api/auth';
 
-// User interface matching new backend response
+// User interface matching backend response from /api/me
 export interface User {
-	id: string;
-	identifier: string; // username
-	email: string;
-	display_name: string;
-	role: string;
-	active: boolean;
+    id: string;
+    identifier: string; // username
+    email: string;
+    display_name: string;
+    role: string;
+    active: boolean;
 }
 
 interface AuthState {
-	user: User | null;
-	isAuthenticated: boolean;
-	isLoading: boolean;
-	error: string | null;
+    user: User | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    error: string | null;
 }
 
-// Initial state
 const initialState: AuthState = {
-	user: null,
-	isAuthenticated: false,
-	isLoading: true,
-	error: null
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+    error: null
 };
 
-// Create the store
 function createAuthStore() {
-	const { subscribe, update } = writable<AuthState>(initialState);
+    const { subscribe, update } = writable<AuthState>(initialState);
 
-	return {
-		subscribe,
+    return {
+        subscribe,
 
-		// Initialize auth state - check if we have a valid session
-		init: async () => {
-			if (!browser) return;
+        // Initialize auth state by validating server-side session cookie.
+        init: async () => {
+            if (!browser) return;
 
-			update((state) => ({ ...state, isLoading: true }));
+            update((state) => ({ ...state, isLoading: true }));
 
-			try {
-				const sessionId = getSessionId();
-				if (sessionId) {
-					// Try to fetch current user to validate session
-					try {
-						const user = await authApi.getCurrentUser();
-						update((state) => ({
-							...state,
-							user,
-							isAuthenticated: true,
-							isLoading: false
-						}));
-					} catch {
-						// Session invalid, clear it
-						clearSession();
-						update((state) => ({ ...state, isLoading: false }));
-					}
-				} else {
-					update((state) => ({ ...state, isLoading: false }));
-				}
-			} catch (error) {
-				console.error('Failed to initialize auth state:', error);
-				update((state) => ({ ...state, isLoading: false }));
-			}
-		},
+            try {
+                const user = await authApi.getCurrentUser();
+                update((state) => ({
+                    ...state,
+                    user,
+                    isAuthenticated: true,
+                    isLoading: false
+                }));
+            } catch {
+                update((state) => ({
+                    ...state,
+                    user: null,
+                    isAuthenticated: false,
+                    isLoading: false
+                }));
+            }
+        },
 
-		// Login user
-		login: async (username: string, password: string) => {
-			update((state) => ({ ...state, isLoading: true, error: null }));
+        login: async (username: string, password: string) => {
+            update((state) => ({ ...state, isLoading: true, error: null }));
 
-			try {
-				const response = await authApi.login({ username, password });
+            try {
+                const response = await authApi.login({ username, password });
 
-				update((state) => ({
-					...state,
-					user: response.user,
-					isAuthenticated: true,
-					isLoading: false
-				}));
+                update((state) => ({
+                    ...state,
+                    user: response.user,
+                    isAuthenticated: true,
+                    isLoading: false
+                }));
 
-				return response.user;
-			} catch (error) {
-				const message = error instanceof Error ? error.message : 'Login failed';
-				update((state) => ({
-					...state,
-					error: message,
-					isLoading: false
-				}));
-				throw error;
-			}
-		},
+                return response.user;
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Login failed';
+                update((state) => ({
+                    ...state,
+                    error: message,
+                    isLoading: false
+                }));
+                throw error;
+            }
+        },
 
-		// Register user
-		register: async (data: {
-			username: string;
-			email: string;
-			password: string;
-			display_name: string;
-		}) => {
-			update((state) => ({ ...state, isLoading: true, error: null }));
+        // Registration creates user but does not authenticate.
+        register: async (data: {
+            username: string;
+            email: string;
+            password: string;
+            display_name: string;
+        }) => {
+            update((state) => ({ ...state, isLoading: true, error: null }));
 
-			try {
-				const response = await authApi.register({
-					username: data.username,
-					email: data.email,
-					password: data.password,
-					display_name: data.display_name
-				});
+            try {
+                const registeredUser = await authApi.register({
+                    username: data.username,
+                    email: data.email,
+                    password: data.password,
+                    display_name: data.display_name
+                });
 
-				update((state) => ({
-					...state,
-					user: response.user,
-					isAuthenticated: true,
-					isLoading: false
-				}));
+                update((state) => ({
+                    ...state,
+                    isLoading: false,
+                    isAuthenticated: false,
+                    user: null
+                }));
 
-				return response.user;
-			} catch (error) {
-				const message = error instanceof Error ? error.message : 'Registration failed';
-				update((state) => ({
-					...state,
-					error: message,
-					isLoading: false
-				}));
-				throw error;
-			}
-		},
+                return registeredUser;
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Registration failed';
+                update((state) => ({
+                    ...state,
+                    error: message,
+                    isLoading: false
+                }));
+                throw error;
+            }
+        },
 
-		// Logout user
-		logout: async () => {
-			update((state) => ({ ...state, isLoading: true }));
+        logout: async () => {
+            update((state) => ({ ...state, isLoading: true }));
 
-			try {
-				await authApi.logout();
-			} finally {
-				update((state) => ({
-					...state,
-					user: null,
-					isAuthenticated: false,
-					isLoading: false
-				}));
-			}
-		},
+            try {
+                await authApi.logout();
+            } finally {
+                update((state) => ({
+                    ...state,
+                    user: null,
+                    isAuthenticated: false,
+                    isLoading: false
+                }));
+            }
+        },
 
-		// Clear error
-		clearError: () => {
-			update((state) => ({ ...state, error: null }));
-		}
-	};
+        clearError: () => {
+            update((state) => ({ ...state, error: null }));
+        }
+    };
 }
 
-// Export the store
 export const authStore = createAuthStore();
 
-// Initialize the store when the app loads
 if (browser) {
-	authStore.init();
+    authStore.init();
 }

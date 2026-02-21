@@ -22,7 +22,7 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 -   Páginas de autenticação prontas (login, registro, recuperação de senha)
 -   Gerenciamento de estado com Svelte 5 runes (`$state`, `$derived`)
 -   Layout responsivo com TailwindCSS
--   Interceptação automática de requisições com session ID
+-   Sessão baseada em cookie HttpOnly no navegador
 
 ## 🛠️ Pré-requisitos
 
@@ -126,6 +126,45 @@ type SessionAdapter interface {
         "role": "admin"
     }
 }
+```
+
+### Canais de autenticação suportados
+
+-   Web: cookie `session_id` (HttpOnly)
+-   API clients/mobile/CLI: `Authorization: Bearer {session_id}` ou `X-Session-ID`
+
+### Exemplos cURL (CLI)
+
+```bash
+# 1) Login e captura do session_id
+SESSION_ID=$(curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin"}' | jq -r '.session_id')
+
+echo "$SESSION_ID"
+```
+
+```bash
+# 2) Acesso via Authorization: Bearer
+curl -s http://localhost:8080/api/me \
+  -H "Authorization: Bearer ${SESSION_ID}"
+```
+
+```bash
+# 3) Acesso via X-Session-ID
+curl -s http://localhost:8080/api/me \
+  -H "X-Session-ID: ${SESSION_ID}"
+```
+
+```bash
+# 4) Fluxo por cookie (estilo navegador)
+# Salva cookies após login
+curl -s -c cookies.txt -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin"}'
+
+# Reusa cookie para rota protegida
+curl -s -b cookies.txt http://localhost:8080/api/me
 ```
 
 ## ⚙️ Configuração

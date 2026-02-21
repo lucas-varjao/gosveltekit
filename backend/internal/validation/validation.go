@@ -24,7 +24,6 @@ var (
 	ErrPasswordNoSpecial    = errors.New("senha deve conter pelo menos um caractere especial")
 	ErrPasswordCommonWord   = errors.New("senha não pode ser uma palavra comum ou fácil de adivinhar")
 	ErrPasswordContainsUser = errors.New("senha não pode conter o nome de usuário")
-	ErrRefreshTokenInvalid  = errors.New("token de atualização inválido")
 	ErrResetTokenInvalid    = errors.New("token de redefinição de senha inválido")
 	ErrDisplayNameInvalid   = errors.New("nome de exibição inválido")
 	ErrDisplayNameTooLong   = errors.New("nome de exibição não pode ter mais de 100 caracteres")
@@ -168,14 +167,6 @@ func ValidateDisplayName(name string) error {
 		return ErrDisplayNameTooLong
 	}
 
-	return nil
-}
-
-// ValidateRefreshToken performs basic validation on refresh tokens
-func ValidateRefreshToken(token string) error {
-	if token == "" || len(token) < minTokenLength {
-		return ErrRefreshTokenInvalid
-	}
 	return nil
 }
 

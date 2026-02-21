@@ -142,6 +142,116 @@ func TestAuthMiddleware(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
+
+	t.Run("Valid Session via Cookie", func(t *testing.T) {
+		authManager, db := createTestAuthManager()
+
+		session := &models.Session{
+			ID:        "cookie-session-id",
+			UserID:    1,
+			ExpiresAt: time.Now().Add(time.Hour),
+			CreatedAt: time.Now(),
+		}
+		db.Create(session)
+
+		user := &models.User{
+			Username:     "testuser3",
+			Email:        "test3@example.com",
+			DisplayName:  "Test User 3",
+			PasswordHash: "hash",
+			Active:       true,
+		}
+		db.Create(user)
+
+		r := gin.New()
+		r.Use(AuthMiddleware(authManager))
+		r.GET("/test", func(c *gin.Context) {
+			c.Status(http.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("Cookie", "session_id=cookie-session-id")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("Reject Header When Header Auth Disabled", func(t *testing.T) {
+		authManager, db := createTestAuthManager()
+
+		session := &models.Session{
+			ID:        "header-disabled-session",
+			UserID:    1,
+			ExpiresAt: time.Now().Add(time.Hour),
+			CreatedAt: time.Now(),
+		}
+		db.Create(session)
+
+		user := &models.User{
+			Username:     "testuser4",
+			Email:        "test4@example.com",
+			DisplayName:  "Test User 4",
+			PasswordHash: "hash",
+			Active:       true,
+		}
+		db.Create(user)
+
+		r := gin.New()
+		r.Use(AuthMiddleware(authManager, AuthMiddlewareOptions{
+			AllowHeaderAuth: false,
+			AllowCookieAuth: true,
+			CookieSecure:    false,
+		}))
+		r.GET("/test", func(c *gin.Context) {
+			c.Status(http.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("Authorization", "Bearer header-disabled-session")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("Reject Cookie When Cookie Auth Disabled", func(t *testing.T) {
+		authManager, db := createTestAuthManager()
+
+		session := &models.Session{
+			ID:        "cookie-disabled-session",
+			UserID:    1,
+			ExpiresAt: time.Now().Add(time.Hour),
+			CreatedAt: time.Now(),
+		}
+		db.Create(session)
+
+		user := &models.User{
+			Username:     "testuser5",
+			Email:        "test5@example.com",
+			DisplayName:  "Test User 5",
+			PasswordHash: "hash",
+			Active:       true,
+		}
+		db.Create(user)
+
+		r := gin.New()
+		r.Use(AuthMiddleware(authManager, AuthMiddlewareOptions{
+			AllowHeaderAuth: true,
+			AllowCookieAuth: false,
+			CookieSecure:    false,
+		}))
+		r.GET("/test", func(c *gin.Context) {
+			c.Status(http.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("Cookie", "session_id=cookie-disabled-session")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
 }
 
 // Test cases for RoleMiddleware

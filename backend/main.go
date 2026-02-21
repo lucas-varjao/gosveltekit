@@ -10,6 +10,7 @@ import (
 	"gosveltekit/internal/config"
 	"gosveltekit/internal/email"
 	"gosveltekit/internal/handlers"
+	"gosveltekit/internal/middleware"
 	"gosveltekit/internal/models"
 	"gosveltekit/internal/router"
 	"gosveltekit/internal/service"
@@ -60,19 +61,37 @@ func main() {
 	userAdapter := gormadapter.NewUserAdapter(db)
 	sessionAdapter := gormadapter.NewSessionAdapter(db)
 
-	// Initialize auth manager with default config
+	// Initialize auth manager from config
 	authConfig := auth.DefaultAuthConfig()
+	if cfg.Auth.SessionTTL > 0 {
+		authConfig.SessionDuration = cfg.Auth.SessionTTL
+	}
+	if cfg.Auth.RefreshThreshold > 0 {
+		authConfig.RefreshThreshold = cfg.Auth.RefreshThreshold
+	}
+	if cfg.Auth.MaxFailedAttempts > 0 {
+		authConfig.MaxFailedAttempts = cfg.Auth.MaxFailedAttempts
+	}
+	if cfg.Auth.LockoutDuration > 0 {
+		authConfig.LockoutDuration = cfg.Auth.LockoutDuration
+	}
+
 	authManager := auth.NewAuthManager(userAdapter, sessionAdapter, authConfig)
+	authMiddlewareOptions := middleware.AuthMiddlewareOptions{
+		AllowHeaderAuth: cfg.Auth.AllowHeaderAuth,
+		AllowCookieAuth: cfg.Auth.AllowCookieAuth,
+		CookieSecure:    cfg.Auth.CookieSecure,
+	}
 
 	// Initialize services
 	emailService := email.NewEmailService(cfg)
 	authService := service.NewAuthService(authManager, userAdapter, emailService)
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(authService)
+	authHandler := handlers.NewAuthHandler(authService, cfg.Auth.CookieSecure)
 
 	// Setup router
-	r := router.SetupRouter(authHandler, authManager)
+	r := router.SetupRouter(authHandler, authManager, authMiddlewareOptions)
 
 	// Start server
 	log.Println("Starting server on :8080")

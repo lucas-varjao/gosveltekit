@@ -15,12 +15,21 @@ import (
 
 // AuthHandler handles authentication-related HTTP requests
 type AuthHandler struct {
-	authService service.AuthServiceInterface
+	authService  service.AuthServiceInterface
+	cookieSecure bool
 }
 
 // NewAuthHandler creates a new AuthHandler instance
-func NewAuthHandler(authService service.AuthServiceInterface) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService service.AuthServiceInterface, cookieSecure ...bool) *AuthHandler {
+	secure := true
+	if len(cookieSecure) > 0 {
+		secure = cookieSecure[0]
+	}
+
+	return &AuthHandler{
+		authService:  authService,
+		cookieSecure: secure,
+	}
 }
 
 // LoginRequest represents the login request body
@@ -45,8 +54,6 @@ type PasswordResetRequest struct {
 	NewPassword     string `json:"new_password"     binding:"required"`
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
-
-const sessionCookieMaxAgeSeconds = 30 * 24 * 60 * 60
 
 // Login handles user authentication with input validation
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -83,15 +90,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Set session cookie
-	c.SetCookie(
-		middleware.SessionCookieName,
-		response.SessionID,
-		sessionCookieMaxAgeSeconds, // 30 days
-		"/",
-		"",
-		true, // secure
-		true, // httpOnly
-	)
+	middleware.SetSessionCookie(c, response.SessionID, response.ExpiresAt, h.cookieSecure)
 
 	c.JSON(http.StatusOK, response)
 }
@@ -110,7 +109,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	// Clear session cookie
-	middleware.ClearSessionCookie(c)
+	middleware.ClearSessionCookie(c, h.cookieSecure)
 
 	c.JSON(http.StatusOK, gin.H{"message": "logout realizado com sucesso"})
 }

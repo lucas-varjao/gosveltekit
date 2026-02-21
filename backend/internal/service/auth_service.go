@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"gosveltekit/internal/auth"
@@ -206,27 +205,16 @@ func (s *AuthService) ResetPassword(tokenFromUser, newPassword string) error {
 	// Hash the provided token and find matching user
 	hashedToken := s.hashToken(tokenFromUser)
 
-	// Find user with this reset token
-	// This is a simplified implementation - in production you might want
-	// to search by the hashed token directly
-	users, err := s.findUsersWithResetTokens()
+	matchedUser, err := s.userAdapter.FindByResetTokenHash(hashedToken)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrInvalidToken
+		}
 		return err
 	}
 
-	var matchedUser *models.User
-	for _, user := range users {
-		if time.Now().After(user.ResetTokenExpiry) {
-			continue
-		}
-		if user.ResetToken == hashedToken {
-			matchedUser = user
-			break
-		}
-	}
-
-	if matchedUser == nil {
-		return ErrInvalidToken
+	if time.Now().After(matchedUser.ResetTokenExpiry) {
+		return ErrExpiredToken
 	}
 
 	// Hash new password
@@ -258,29 +246,9 @@ func (s *AuthService) hashToken(token string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func (s *AuthService) findUsersWithResetTokens() ([]*models.User, error) {
-	// This method would need to be added to the userAdapter
-	// For now, we'll use a workaround
-	return nil, errors.New("not implemented - use direct DB query")
-}
-
 // ConvertToPublicUser strips sensitive fields from user
 func ConvertToPublicUser(user *models.User) *models.User {
 	user.PasswordHash = ""
 	user.ResetToken = ""
 	return user
-}
-
-// ParseUserID converts a string user ID to uint
-func ParseUserID(id string) (uint, error) {
-	parsed, err := strconv.ParseUint(id, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return uint(parsed), nil
-}
-
-// Helper to extract session ID from token string
-func ExtractSessionID(token string) string {
-	return strings.TrimPrefix(token, "Bearer ")
 }

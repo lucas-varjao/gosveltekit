@@ -18,11 +18,14 @@ server:
   port: 8080
 database:
   dsn: "test.db"
-jwt:
-  secret-key: "test-secret-key"
-  access_token_ttl: 15m
-  refresh_token_ttl: 24h
-  issuer: "gosveltekit-test"
+auth:
+  session_ttl: 720h
+  refresh_threshold: 360h
+  max_failed_attempts: 8
+  lockout_duration: 45m
+  allow_header_auth: true
+  allow_cookie_auth: true
+  cookie_secure: false
 `
 	err := os.MkdirAll("./configs", 0755)
 	assert.NoError(t, err)
@@ -50,10 +53,13 @@ func TestLoadConfig(t *testing.T) {
 	// Verify loaded values
 	assert.Equal(t, 8080, config.Server.Port)
 	assert.Equal(t, "test.db", config.Database.DSN)
-	assert.Equal(t, "test-secret-key", config.JWT.SecretKey)
-	assert.Equal(t, 15*time.Minute, config.JWT.AccessTokenTTL)
-	assert.Equal(t, 24*time.Hour, config.JWT.RefreshTokenTTL)
-	assert.Equal(t, "gosveltekit-test", config.JWT.Issuer)
+	assert.Equal(t, 720*time.Hour, config.Auth.SessionTTL)
+	assert.Equal(t, 360*time.Hour, config.Auth.RefreshThreshold)
+	assert.Equal(t, 8, config.Auth.MaxFailedAttempts)
+	assert.Equal(t, 45*time.Minute, config.Auth.LockoutDuration)
+	assert.True(t, config.Auth.AllowHeaderAuth)
+	assert.True(t, config.Auth.AllowCookieAuth)
+	assert.False(t, config.Auth.CookieSecure)
 }
 
 func TestLoadConfigError(t *testing.T) {
