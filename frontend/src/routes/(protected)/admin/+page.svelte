@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { apiRequest } from '$lib/api/client'
+    import { Alert, AlertDescription } from '$lib/components/ui/alert'
+    import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 
     interface AdminDashboardResponse {
         message: string
@@ -36,17 +38,21 @@
     <p class="mt-2 text-slate-400">Administrative area.</p>
 
     {#if isLoading}
-        <div class="mt-8 rounded border border-slate-800 bg-slate-900 p-6 text-slate-300">
-            Loading admin dashboard...
-        </div>
+        <Card class="mt-8 border-slate-800 bg-slate-900">
+            <CardContent class="text-slate-300">Loading admin dashboard...</CardContent>
+        </Card>
     {:else if errorMessage}
-        <div class="mt-8 rounded border border-red-500 bg-red-900/50 p-6 text-red-300">
-            {errorMessage}
-        </div>
+        <Alert variant="destructive" class="mt-8 border-red-500/60 bg-red-950/50 text-red-200">
+            <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
     {:else if data}
-        <div class="mt-8 rounded border border-slate-800 bg-slate-900 p-6">
-            <h2 class="text-xl font-semibold text-white">Dashboard</h2>
-            <p class="mt-2 text-slate-300">{data.message}</p>
-        </div>
+        <Card class="mt-8 border-slate-800 bg-slate-900">
+            <CardHeader>
+                <CardTitle>Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p class="text-slate-300">{data.message}</p>
+            </CardContent>
+        </Card>
     {/if}
 </section>

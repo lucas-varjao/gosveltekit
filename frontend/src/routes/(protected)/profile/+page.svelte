@@ -1,6 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { accountApi, type AccountProfile } from '$lib/api/account'
+    import { Alert, AlertDescription } from '$lib/components/ui/alert'
+    import { buttonVariants } from '$lib/components/ui/button'
+    import { Card, CardContent } from '$lib/components/ui/card'
+    import { Input } from '$lib/components/ui/input'
+    import { Label } from '$lib/components/ui/label'
+    import { cn } from '$lib/utils'
 
     let profile = $state<AccountProfile | null>(null)
     let displayName = $state('')
@@ -60,83 +66,64 @@
     <p class="mt-2 text-slate-400">Update your account profile information.</p>
 
     {#if isLoading}
-        <div class="mt-8 rounded border border-slate-800 bg-slate-900 p-6 text-slate-300">
-            Loading profile...
-        </div>
+        <Card class="mt-8 border-slate-800 bg-slate-900">
+            <CardContent class="text-slate-300">Loading profile...</CardContent>
+        </Card>
     {:else if profile}
-        <div class="mt-8 rounded border border-slate-800 bg-slate-900 p-6">
-            <div class="grid gap-3 text-sm text-slate-300 md:grid-cols-2">
-                <p><span class="text-slate-500">Username:</span> {profile.identifier}</p>
-                <p><span class="text-slate-500">Email:</span> {profile.email}</p>
-                <p><span class="text-slate-500">Role:</span> {profile.role}</p>
-                <p>
-                    <span class="text-slate-500">Status:</span>
-                    {profile.active ? 'Active' : 'Inactive'}
-                </p>
-            </div>
-
-            <form class="mt-6 flex flex-col gap-4" onsubmit={handleSubmit}>
-                <div class="flex flex-col gap-2">
-                    <label for="display_name" class="text-sm font-medium text-slate-200"
-                        >Display Name</label
-                    >
-                    <input
-                        id="display_name"
-                        type="text"
-                        bind:value={displayName}
-                        class="rounded border border-slate-700 bg-slate-800 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
+        <Card class="mt-8 border-slate-800 bg-slate-900">
+            <CardContent>
+                <div class="grid gap-3 text-sm text-slate-300 md:grid-cols-2">
+                    <p><span class="text-slate-500">Username:</span> {profile.identifier}</p>
+                    <p><span class="text-slate-500">Email:</span> {profile.email}</p>
+                    <p><span class="text-slate-500">Role:</span> {profile.role}</p>
+                    <p>
+                        <span class="text-slate-500">Status:</span>
+                        {profile.active ? 'Active' : 'Inactive'}
+                    </p>
                 </div>
 
-                <div class="grid gap-4 md:grid-cols-2">
+                <form class="mt-6 flex flex-col gap-4" onsubmit={handleSubmit}>
                     <div class="flex flex-col gap-2">
-                        <label for="first_name" class="text-sm font-medium text-slate-200"
-                            >First Name</label
-                        >
-                        <input
-                            id="first_name"
-                            type="text"
-                            bind:value={firstName}
-                            class="rounded border border-slate-700 bg-slate-800 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
+                        <Label for="display_name">Display Name</Label>
+                        <Input id="display_name" type="text" bind:value={displayName} />
                     </div>
-                    <div class="flex flex-col gap-2">
-                        <label for="last_name" class="text-sm font-medium text-slate-200"
-                            >Last Name</label
-                        >
-                        <input
-                            id="last_name"
-                            type="text"
-                            bind:value={lastName}
-                            class="rounded border border-slate-700 bg-slate-800 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
+
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="flex flex-col gap-2">
+                            <Label for="first_name">First Name</Label>
+                            <Input id="first_name" type="text" bind:value={firstName} />
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <Label for="last_name">Last Name</Label>
+                            <Input id="last_name" type="text" bind:value={lastName} />
+                        </div>
                     </div>
-                </div>
 
-                {#if errorMessage}
-                    <p
-                        class="rounded border border-red-500 bg-red-900/50 px-3 py-2 text-sm text-red-300"
+                    {#if errorMessage}
+                        <Alert
+                            variant="destructive"
+                            class="border-red-500/60 bg-red-950/50 text-red-200"
+                        >
+                            <AlertDescription>{errorMessage}</AlertDescription>
+                        </Alert>
+                    {/if}
+
+                    {#if successMessage}
+                        <Alert class="border-emerald-500/60 bg-emerald-950/50 text-emerald-200">
+                            <AlertDescription>{successMessage}</AlertDescription>
+                        </Alert>
+                    {/if}
+
+                    <button
+                        type="submit"
+                        disabled={isSaving}
+                        class={cn(buttonVariants({ variant: 'default' }), 'mt-2 w-fit')}
                     >
-                        {errorMessage}
-                    </p>
-                {/if}
-
-                {#if successMessage}
-                    <p
-                        class="rounded border border-green-500 bg-green-900/50 px-3 py-2 text-sm text-green-300"
-                    >
-                        {successMessage}
-                    </p>
-                {/if}
-
-                <button
-                    type="submit"
-                    disabled={isSaving}
-                    class="mt-2 w-fit rounded bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-            </form>
-        </div>
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </form>
+            </CardContent>
+        </Card>
     {/if}
 </section>

@@ -1,6 +1,8 @@
 <script lang="ts">
     import { page } from '$app/state'
     import { resolve } from '$app/paths'
+    import { buttonVariants } from '$lib/components/ui/button'
+    import { cn } from '$lib/utils'
 
     const status = $derived(page.status)
     const error = $derived(page.error as { message?: string } | null)
@@ -21,15 +23,10 @@
         <p class="mt-4 text-slate-300">{description}</p>
 
         <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <a
-                href={resolve('/')}
-                class="rounded bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700"
-            >
-                Go Home
-            </a>
+            <a href={resolve('/')} class={buttonVariants({ variant: 'default' })}> Go Home </a>
             <a
                 href={resolve('/login')}
-                class="rounded border border-slate-700 px-4 py-2 font-semibold text-slate-200 transition-colors hover:bg-slate-800"
+                class={cn(buttonVariants({ variant: 'outline' }), 'border-slate-700')}
             >
                 Sign In
             </a>

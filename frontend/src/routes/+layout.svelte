@@ -2,9 +2,12 @@
 
 <script lang="ts">
     import '../app.css'
+    import { LoaderCircle, LogIn, LogOut } from '@lucide/svelte'
     import { authStore } from '$lib/stores/auth'
+    import { buttonVariants } from '$lib/components/ui/button'
     import { goto } from '$app/navigation'
     import { resolve } from '$app/paths'
+    import { cn } from '$lib/utils'
 
     let { children } = $props()
 
@@ -43,19 +46,25 @@
 
                 <div class="text-sm font-semibold">
                     {#if isLoading}
-                        <div
-                            class="h-4 w-4 animate-spin rounded-full border-4 border-slate-700 border-t-slate-300"
-                        ></div>
+                        <LoaderCircle class="size-4 animate-spin text-slate-300" />
                     {:else if isAuthenticated}
                         {#if user}
                             <span>{user.display_name} | </span>
                         {/if}
-                        <button onclick={handleLogout} class="text-slate-400 hover:text-white"
-                            >Sign Out</button
+                        <button
+                            onclick={handleLogout}
+                            class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'px-2')}
                         >
+                            <LogOut class="size-4" />
+                            Sign Out
+                        </button>
                     {:else}
-                        <a href={resolve('/login')} class="text-slate-400 hover:text-white"
-                            >Sign In</a
+                        <a
+                            href={resolve('/login')}
+                            class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'px-2')}
+                        >
+                            <LogIn class="size-4" />
+                            Sign In</a
                         >
                     {/if}
                 </div>

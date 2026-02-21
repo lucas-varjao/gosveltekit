@@ -1,5 +1,13 @@
 <script lang="ts">
     import { resolve } from '$app/paths'
+    import { LockKeyhole, MonitorSmartphone } from '@lucide/svelte'
+    import {
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle
+    } from '$lib/components/ui/card'
 </script>
 
 <section class="mx-auto max-w-4xl py-6">
@@ -7,22 +15,34 @@
     <p class="mt-2 text-slate-400">Manage account security and active sessions.</p>
 
     <div class="mt-8 grid gap-4 md:grid-cols-2">
-        <a
-            href={resolve('/settings/security')}
-            class="rounded border border-slate-800 bg-slate-900 p-5 transition-colors hover:border-slate-700 hover:bg-slate-800"
-        >
-            <h2 class="text-xl font-semibold text-white">Security</h2>
-            <p class="mt-2 text-sm text-slate-400">
-                Change your password and review account security.
-            </p>
+        <a href={resolve('/settings/security')}>
+            <Card
+                class="border-slate-800 bg-slate-900 transition-colors hover:border-slate-700 hover:bg-slate-800"
+            >
+                <CardHeader class="flex-row items-center gap-3">
+                    <LockKeyhole class="size-5 text-slate-300" />
+                    <CardTitle class="text-xl">Security</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription>
+                        Change your password and review account security.
+                    </CardDescription>
+                </CardContent>
+            </Card>
         </a>
 
-        <a
-            href={resolve('/settings/sessions')}
-            class="rounded border border-slate-800 bg-slate-900 p-5 transition-colors hover:border-slate-700 hover:bg-slate-800"
-        >
-            <h2 class="text-xl font-semibold text-white">Sessions</h2>
-            <p class="mt-2 text-sm text-slate-400">Inspect active sessions and revoke access.</p>
+        <a href={resolve('/settings/sessions')}>
+            <Card
+                class="border-slate-800 bg-slate-900 transition-colors hover:border-slate-700 hover:bg-slate-800"
+            >
+                <CardHeader class="flex-row items-center gap-3">
+                    <MonitorSmartphone class="size-5 text-slate-300" />
+                    <CardTitle class="text-xl">Sessions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription>Inspect active sessions and revoke access.</CardDescription>
+                </CardContent>
+            </Card>
         </a>
     </div>
 </section>

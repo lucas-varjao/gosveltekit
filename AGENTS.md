@@ -43,6 +43,7 @@ internal/auth/
 - **Styling**: TailwindCSS (utility-first)
 - **Runtime**: Bun
 - **UI Components**: shadcn-svelte
+- **Icons**: @lucide/svelte (Svelte 5)
 - **Mode**: Dark mode only
 - Always use Svelte 5 with the new runes API (`$state`, `$derived`, `$props`)
 

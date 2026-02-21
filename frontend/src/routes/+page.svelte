@@ -2,6 +2,8 @@
 
 <script lang="ts">
     import { resolve } from '$app/paths'
+    import { buttonVariants } from '$lib/components/ui/button'
+    import { Activity, LogIn, UserRound } from '@lucide/svelte'
 </script>
 
 <section class="py-12">
@@ -12,22 +14,16 @@
         </p>
 
         <div class="flex flex-wrap items-center justify-center gap-3">
-            <a
-                href={resolve('/login')}
-                class="rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
-            >
+            <a href={resolve('/login')} class={buttonVariants({ variant: 'default' })}>
+                <LogIn class="size-4" />
                 Sign In
             </a>
-            <a
-                href={resolve('/profile')}
-                class="rounded border border-slate-700 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800"
-            >
+            <a href={resolve('/profile')} class={buttonVariants({ variant: 'outline' })}>
+                <UserRound class="size-4" />
                 Profile
             </a>
-            <a
-                href={resolve('/status')}
-                class="rounded border border-slate-700 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800"
-            >
+            <a href={resolve('/status')} class={buttonVariants({ variant: 'outline' })}>
+                <Activity class="size-4" />
                 Status
             </a>
         </div>

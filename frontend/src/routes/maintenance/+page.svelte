@@ -1,5 +1,7 @@
 <script lang="ts">
     import { resolve } from '$app/paths'
+    import { buttonVariants } from '$lib/components/ui/button'
+    import { cn } from '$lib/utils'
 </script>
 
 <section class="mx-auto max-w-2xl py-12 text-center">
@@ -10,15 +12,10 @@
     </p>
 
     <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <a
-            href={resolve('/status')}
-            class="rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
-        >
-            Check Status
-        </a>
+        <a href={resolve('/status')} class={buttonVariants({ variant: 'default' })}>Check Status</a>
         <a
             href={resolve('/')}
-            class="rounded border border-slate-700 px-4 py-2 font-semibold text-slate-200 hover:bg-slate-800"
+            class={cn(buttonVariants({ variant: 'outline' }), 'border-slate-700')}
         >
             Back Home
         </a>

@@ -1,6 +1,7 @@
 <!-- frontend/src/routes/(protected)/+layout.svelte -->
 
 <script lang="ts">
+    import { LoaderCircle } from '@lucide/svelte'
     import { browser } from '$app/environment'
     import { goto } from '$app/navigation'
     import { resolve } from '$app/paths'
@@ -19,9 +20,7 @@
 {#if $authStore.isLoading}
     <div class="flex h-screen items-center justify-center">
         <div class="text-center">
-            <div
-                class="h-12 w-12 animate-spin rounded-full border-4 border-slate-700 border-t-slate-300"
-            ></div>
+            <LoaderCircle class="mx-auto size-10 animate-spin text-slate-300" />
             <p class="mt-4 text-slate-300">Loading...</p>
         </div>
     </div>

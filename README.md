@@ -22,6 +22,8 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 -   Páginas de autenticação prontas (login, registro, recuperação de senha)
 -   Gerenciamento de estado com Svelte 5 runes (`$state`, `$derived`)
 -   Layout responsivo com TailwindCSS
+-   Componentes UI seguindo o padrão **shadcn-svelte**
+-   Ícones SVG com **@lucide/svelte** (Svelte 5)
 -   Sessão baseada em cookie HttpOnly no navegador
 
 ## 🛠️ Pré-requisitos
