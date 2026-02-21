@@ -6,24 +6,14 @@ import (
 	"time"
 
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to connect database: %v", err)
-	}
-
-	err = db.AutoMigrate(&models.User{})
-	if err != nil {
-		t.Fatalf("failed to migrate database: %v", err)
-	}
-
-	return db
+	return testutil.NewSQLiteTestDB(t, &models.User{})
 }
 
 func createTestUser(t *testing.T, db *gorm.DB) *models.User {

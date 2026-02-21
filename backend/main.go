@@ -16,7 +16,7 @@ import (
 	"gosveltekit/internal/service"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -28,10 +28,12 @@ func main() {
 
 	dbDSN := cfg.Database.DSN
 
-	// Connect to SQLite
-	db, err := gorm.Open(sqlite.Open(dbDSN), &gorm.Config{})
+	// Connect to PostgreSQL
+	db, err := gorm.Open(postgres.Open(dbDSN), &gorm.Config{})
 	if err != nil {
-		panic("Falha ao conectar ao banco de dados")
+		panic(
+			"Falha ao conectar ao banco PostgreSQL. Verifique DATABASE_DSN/DATABASE_URL ou database.dsn no app.yml",
+		)
 	}
 
 	// Migrate tables (including new Session table)

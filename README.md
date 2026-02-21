@@ -1,10 +1,10 @@
 # GoSvelteKit
 
-Um template fullstack pronto para uso com **autenticação baseada em sessões**, combinando backend Golang com SQLite e frontend SvelteKit.
+Um template fullstack pronto para uso com **autenticação baseada em sessões**, combinando backend Golang com PostgreSQL e frontend SvelteKit.
 
 ## 📋 Visão Geral
 
-GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de aplicações web fullstack. Este template vem pré-configurado com autenticação plugável (inspirada no Lucia Auth), banco de dados SQLite e páginas de login/registro, permitindo que você pule a configuração inicial repetitiva e foque nas funcionalidades específicas do seu projeto.
+GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de aplicações web fullstack. Este template vem pré-configurado com autenticação plugável (inspirada no Lucia Auth), banco de dados PostgreSQL em runtime e páginas de login/registro, permitindo que você pule a configuração inicial repetitiva e foque nas funcionalidades específicas do seu projeto.
 
 ## 🚀 Recursos
 
@@ -12,7 +12,7 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 
 -   **Autenticação plugável** com adapters (estilo Lucia Auth)
 -   Sessões armazenadas no banco de dados
--   Banco de dados SQLite com GORM
+-   Banco de dados PostgreSQL com GORM (runtime)
 -   Estrutura modular e escalável
 -   Middleware de autenticação
 -   API RESTful com Gin
@@ -174,6 +174,26 @@ Copie o arquivo `.env.example` para `.env` e ajuste as variáveis conforme neces
 ```bash
 cp .env.example .env
 ```
+
+O backend usa **Viper com padrão env-first**:
+
+- Se a variável de ambiente existir, ela vence.
+- Se não existir, faz fallback para `backend/configs/app.yml`.
+
+Isso vale para todas as seções (`server`, `database`, `auth`, `email`) usando o padrão `SECAO_CHAVE`.
+
+Exemplos:
+
+```bash
+export SERVER_PORT='8080'
+export AUTH_SESSION_TTL='720h'
+export EMAIL_SMTP_HOST='sandbox.smtp.mailtrap.io'
+export DATABASE_DSN='postgresql://postgres:postgres@localhost:5432/gosveltekit?sslmode=disable'
+```
+
+Compatibilidade de banco: `DATABASE_URL` também é aceito como alias de `DATABASE_DSN`.
+
+Observação sobre testes: a suíte automatizada do backend usa SQLite em memória para manter execução rápida.
 
 ## 🔄 Começando um Novo Projeto
 

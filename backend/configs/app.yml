@@ -3,7 +3,7 @@
 server:
     port: 8080
 database:
-    dsn: 'gosveltekit.db'
+    dsn: 'postgresql://postgres:postgres@localhost:5432/gosveltekit?sslmode=disable'
 auth:
     session_ttl: 720h # 30 dias
     refresh_threshold: 360h # 15 dias

@@ -13,10 +13,9 @@ import (
 	"gosveltekit/internal/handlers"
 	"gosveltekit/internal/models"
 	"gosveltekit/internal/service"
+	"gosveltekit/internal/testutil"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 // MockAuthService implements service.AuthServiceInterface
@@ -70,10 +69,9 @@ func NewMockAuthHandler() *handlers.AuthHandler {
 	return handlers.NewAuthHandler(mockAuthService)
 }
 
-func NewMockAuthManager() *auth.AuthManager {
-	// Create in-memory database for testing
-	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	db.AutoMigrate(&models.User{}, &models.Session{})
+func NewMockAuthManager(t *testing.T) *auth.AuthManager {
+	t.Helper()
+	db := testutil.NewSQLiteTestDB(t, &models.User{}, &models.Session{})
 
 	userAdapter := gormadapter.NewUserAdapter(db)
 	sessionAdapter := gormadapter.NewSessionAdapter(db)
@@ -86,7 +84,7 @@ func TestSetupRouter(t *testing.T) {
 
 	// Setup
 	mockAuthHandler := NewMockAuthHandler()
-	mockAuthManager := NewMockAuthManager()
+	mockAuthManager := NewMockAuthManager(t)
 	router := SetupRouter(mockAuthHandler, mockAuthManager)
 
 	// Test cases structure
@@ -153,7 +151,7 @@ func TestRateLimiting(t *testing.T) {
 
 	// Setup
 	mockAuthHandler := NewMockAuthHandler()
-	mockAuthManager := NewMockAuthManager()
+	mockAuthManager := NewMockAuthManager(t)
 	router := SetupRouter(mockAuthHandler, mockAuthManager)
 
 	// Test auth routes rate limiting
@@ -185,7 +183,7 @@ func TestProtectedRoutes(t *testing.T) {
 
 	// Setup
 	mockAuthHandler := NewMockAuthHandler()
-	mockAuthManager := NewMockAuthManager()
+	mockAuthManager := NewMockAuthManager(t)
 	router := SetupRouter(mockAuthHandler, mockAuthManager)
 
 	tests := []struct {

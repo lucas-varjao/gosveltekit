@@ -10,10 +10,10 @@ import (
 	"gosveltekit/internal/auth"
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/testutil"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -23,9 +23,9 @@ func init() {
 }
 
 // createTestAuthManager creates a test AuthManager with in-memory database
-func createTestAuthManager() (*auth.AuthManager, *gorm.DB) {
-	db, _ := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	db.AutoMigrate(&models.User{}, &models.Session{})
+func createTestAuthManager(t testing.TB) (*auth.AuthManager, *gorm.DB) {
+	t.Helper()
+	db := testutil.NewSQLiteTestDB(t, &models.User{}, &models.Session{})
 
 	userAdapter := gormadapter.NewUserAdapter(db)
 	sessionAdapter := gormadapter.NewSessionAdapter(db)
@@ -36,7 +36,7 @@ func createTestAuthManager() (*auth.AuthManager, *gorm.DB) {
 // Test cases for AuthMiddleware
 func TestAuthMiddleware(t *testing.T) {
 	t.Run("Missing Authorization Header", func(t *testing.T) {
-		authManager, _ := createTestAuthManager()
+		authManager, _ := createTestAuthManager(t)
 
 		r := gin.New()
 		r.Use(AuthMiddleware(authManager))
@@ -53,7 +53,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("Invalid Session ID", func(t *testing.T) {
-		authManager, _ := createTestAuthManager()
+		authManager, _ := createTestAuthManager(t)
 
 		r := gin.New()
 		r.Use(AuthMiddleware(authManager))
@@ -71,7 +71,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("Valid Session via Header", func(t *testing.T) {
-		authManager, db := createTestAuthManager()
+		authManager, db := createTestAuthManager(t)
 
 		// Create a valid session directly in the database
 		session := &models.Session{
@@ -110,7 +110,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("Valid Session via X-Session-ID Header", func(t *testing.T) {
-		authManager, db := createTestAuthManager()
+		authManager, db := createTestAuthManager(t)
 
 		session := &models.Session{
 			ID:        "header-session-id",
@@ -144,7 +144,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("Valid Session via Cookie", func(t *testing.T) {
-		authManager, db := createTestAuthManager()
+		authManager, db := createTestAuthManager(t)
 
 		session := &models.Session{
 			ID:        "cookie-session-id",
@@ -178,7 +178,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("Reject Header When Header Auth Disabled", func(t *testing.T) {
-		authManager, db := createTestAuthManager()
+		authManager, db := createTestAuthManager(t)
 
 		session := &models.Session{
 			ID:        "header-disabled-session",
@@ -216,7 +216,7 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("Reject Cookie When Cookie Auth Disabled", func(t *testing.T) {
-		authManager, db := createTestAuthManager()
+		authManager, db := createTestAuthManager(t)
 
 		session := &models.Session{
 			ID:        "cookie-disabled-session",

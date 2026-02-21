@@ -3,7 +3,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -49,10 +51,36 @@ type Config struct {
 
 var cfg *Config
 
+var envConfigKeys = []string{
+	"server.port",
+	"database.dsn",
+	"auth.session_ttl",
+	"auth.refresh_threshold",
+	"auth.max_failed_attempts",
+	"auth.lockout_duration",
+	"auth.allow_header_auth",
+	"auth.allow_cookie_auth",
+	"auth.cookie_secure",
+	"email.smtp_host",
+	"email.smtp_port",
+	"email.smtp_username",
+	"email.smtp_password",
+	"email.from_email",
+	"email.from_name",
+	"email.reset_url",
+}
+
 func LoadConfig() (*Config, error) {
 	viper.SetConfigName("app")
 	viper.SetConfigType("yml")
 	viper.AddConfigPath("./configs")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
+	if err := bindEnvConfigKeys(); err != nil {
+		return nil, fmt.Errorf("falha ao vincular variáveis de ambiente: %w", err)
+	}
+
 	viper.SetDefault("auth.session_ttl", "720h")
 	viper.SetDefault("auth.refresh_threshold", "360h")
 	viper.SetDefault("auth.max_failed_attempts", defaultMaxFailedAttempts)
@@ -62,7 +90,15 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("auth.cookie_secure", false)
 
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("falha ao ler o arquivo de configuração: %w", err)
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
+			return nil, fmt.Errorf("falha ao ler o arquivo de configuração: %w", err)
+		}
+
+		// Allow env-only execution when config file is absent.
+		if viper.GetString("database.dsn") == "" {
+			return nil, fmt.Errorf("falha ao ler o arquivo de configuração: %w", err)
+		}
 	}
 
 	cfg = &Config{}
@@ -75,4 +111,22 @@ func LoadConfig() (*Config, error) {
 
 func GetConfig() *Config {
 	return cfg
+}
+
+func bindEnvConfigKeys() error {
+	for _, key := range envConfigKeys {
+		// Keep DATABASE_URL as a compatibility alias for database.dsn.
+		if key == "database.dsn" {
+			if err := viper.BindEnv(key, "DATABASE_DSN", "DATABASE_URL"); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := viper.BindEnv(key); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

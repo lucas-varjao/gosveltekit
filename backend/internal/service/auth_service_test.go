@@ -8,21 +8,17 @@ import (
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
 	"gosveltekit/internal/email"
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 // Test helpers
 func setupTest(t *testing.T) (*AuthService, *auth.AuthManager, *gormadapter.UserAdapter, *gormadapter.SessionAdapter, *email.MockEmailService, *gorm.DB) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	require.NoError(t, err)
-
-	err = db.AutoMigrate(&models.User{}, &models.Session{})
-	require.NoError(t, err)
+	db := testutil.NewSQLiteTestDB(t, &models.User{}, &models.Session{})
 
 	userAdapter := gormadapter.NewUserAdapter(db)
 	sessionAdapter := gormadapter.NewSessionAdapter(db)

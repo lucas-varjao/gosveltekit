@@ -6,11 +6,21 @@ GoSvelteKit is a template/base project with a Golang backend and SvelteKit (Svel
 
 - **Framework**: Golang with Gin
 - **Authentication**: Session-based (pluggable adapters inspired by Lucia Auth)
-- **Database**: SQLite (via GORM)
+- **Database**: PostgreSQL em runtime (via GORM)
 - **ORM**: GORM for database operations
 - **API Docs**: Swaggo
 - **Logging**: Zap
-- **Config**: Viper
+- **Config**: Viper com padrão env-first e fallback para `backend/configs/app.yml`
+
+### Config Loading Pattern
+
+- Sempre priorizar variáveis de ambiente para todas as chaves de configuração.
+- Quando a variável não existir, usar o valor do arquivo `backend/configs/app.yml`.
+- Convenção de nomes: chaves aninhadas viram env em uppercase com `_`:
+  - `server.port` -> `SERVER_PORT`
+  - `auth.session_ttl` -> `AUTH_SESSION_TTL`
+  - `email.smtp_host` -> `EMAIL_SMTP_HOST`
+- Banco: `DATABASE_DSN` é o nome preferencial; `DATABASE_URL` é alias compatível.
 
 ### Authentication Architecture
 
