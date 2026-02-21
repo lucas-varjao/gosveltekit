@@ -161,7 +161,7 @@ func TestRateLimiting(t *testing.T) {
 		path := "/auth/login"
 
 		// Make multiple requests to trigger rate limiting
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", path, nil)
 			req.RemoteAddr = "192.0.2.1:1234" // Set a consistent IP for testing

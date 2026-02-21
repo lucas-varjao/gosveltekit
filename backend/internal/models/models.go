@@ -23,8 +23,8 @@ type User struct {
 	// Account status
 	Active        bool      `gorm:"default:true" json:"active"`
 	EmailVerified bool      `gorm:"default:false" json:"email_verified"`
-	LastLogin     time.Time `json:"last_login,omitempty"`
-	LastActive    time.Time `json:"last_active,omitempty"`
+	LastLogin     time.Time `json:"last_login"`
+	LastActive    time.Time `json:"last_active"`
 
 	// Access control
 	Role        string `gorm:"default:user" json:"role"`

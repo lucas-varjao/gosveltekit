@@ -115,7 +115,7 @@ func extractSessionID(c *gin.Context) string {
 }
 
 // setSessionCookie sets the session cookie in the response
-func setSessionCookie(c *gin.Context, sessionID string, expiresAt interface{}) {
+func setSessionCookie(c *gin.Context, sessionID string, expiresAt any) {
 	// Calculate max age in seconds
 	maxAge := 30 * 24 * 60 * 60 // 30 days default
 

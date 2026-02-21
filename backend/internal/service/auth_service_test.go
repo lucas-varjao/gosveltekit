@@ -119,7 +119,7 @@ func TestAuthService_Login_AccountLocked(t *testing.T) {
 	_ = createTestUser(t, db)
 
 	// Attempt to login with wrong password 5 times
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		_, _ = authService.Login("testuser", "wrongpass", "127.0.0.1", "test-agent")
 	}
 

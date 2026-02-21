@@ -217,7 +217,7 @@ func TestRateLimitMiddleware(t *testing.T) {
 		requestCount := 10
 		results := make([]bool, requestCount)
 
-		for i := 0; i < requestCount; i++ {
+		for i := range requestCount {
 			wg.Add(1)
 			go func(index int) {
 				defer wg.Done()
