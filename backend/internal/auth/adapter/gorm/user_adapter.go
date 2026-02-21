@@ -2,6 +2,7 @@
 package gorm
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -27,7 +28,7 @@ func (a *UserAdapter) FindUserByIdentifier(identifier string) (*auth.UserData, e
 	var user models.User
 	err := a.db.Where("username = ? OR email = ?", identifier, identifier).First(&user).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, auth.ErrInvalidCredentials
 		}
 		return nil, err
@@ -44,7 +45,7 @@ func (a *UserAdapter) FindUserByID(id string) (*auth.UserData, error) {
 
 	var user models.User
 	if err := a.db.First(&user, userID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, auth.ErrInvalidCredentials
 		}
 		return nil, err
@@ -75,7 +76,7 @@ func (a *UserAdapter) ValidateCredentials(identifier, password string) (*auth.Us
 // CreateUser creates a new user
 func (a *UserAdapter) CreateUser(data auth.CreateUserInput) (*auth.UserData, error) {
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Passphrase), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func (a *UserAdapter) CreateUser(data auth.CreateUserInput) (*auth.UserData, err
 }
 
 // UpdatePassword updates the user's password
-func (a *UserAdapter) UpdatePassword(userID string, newPassword string) error {
+func (a *UserAdapter) UpdatePassword(userID, newPassword string) error {
 	id, err := strconv.ParseUint(userID, 10, 64)
 	if err != nil {
 		return err

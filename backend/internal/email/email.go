@@ -137,7 +137,7 @@ func (s *EmailService) sendEmail(to, subject, htmlBody string) error {
 	// Construir a mensagem com cabeçalhos e corpo
 	var message bytes.Buffer
 	for k, v := range headers {
-		message.WriteString(fmt.Sprintf("%s: %s\r\n", k, v))
+		fmt.Fprintf(&message, "%s: %s\r\n", k, v)
 	}
 	message.WriteString("\r\n")
 	message.WriteString(htmlBody)

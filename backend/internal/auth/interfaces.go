@@ -52,7 +52,7 @@ type SessionMetadata struct {
 type CreateUserInput struct {
 	Identifier  string
 	Email       string
-	Password    string
+	Passphrase  string
 	DisplayName string
 	Attributes  map[string]any
 }
@@ -72,7 +72,7 @@ type UserAdapter interface {
 	CreateUser(data CreateUserInput) (*UserData, error)
 
 	// UpdatePassword updates the password (optional for legacy systems)
-	UpdatePassword(userID string, newPassword string) error
+	UpdatePassword(userID, newPassword string) error
 }
 
 // SessionAdapter manages authentication sessions

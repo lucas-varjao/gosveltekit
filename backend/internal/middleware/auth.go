@@ -2,8 +2,10 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"gosveltekit/internal/auth"
 
@@ -39,11 +41,11 @@ func AuthMiddleware(authManager *auth.AuthManager) gin.HandlerFunc {
 			message := "sessão inválida"
 
 			switch {
-			case err == auth.ErrSessionExpired:
+			case errors.Is(err, auth.ErrSessionExpired):
 				message = "sessão expirada"
-			case err == auth.ErrSessionNotFound:
+			case errors.Is(err, auth.ErrSessionNotFound):
 				message = "sessão não encontrada"
-			case err == auth.ErrUserNotActive:
+			case errors.Is(err, auth.ErrUserNotActive):
 				message = "usuário inativo"
 			}
 
@@ -115,9 +117,15 @@ func extractSessionID(c *gin.Context) string {
 }
 
 // setSessionCookie sets the session cookie in the response
-func setSessionCookie(c *gin.Context, sessionID string, expiresAt any) {
-	// Calculate max age in seconds
-	maxAge := 30 * 24 * 60 * 60 // 30 days default
+func setSessionCookie(c *gin.Context, sessionID string, expiresAt time.Time) {
+	// Keep a safe fallback for zero or already-expired values.
+	maxAge := 30 * 24 * 60 * 60
+	if !expiresAt.IsZero() {
+		secondsUntilExpiry := int(time.Until(expiresAt).Seconds())
+		if secondsUntilExpiry > 0 {
+			maxAge = secondsUntilExpiry
+		}
+	}
 
 	c.SetCookie(
 		SessionCookieName,

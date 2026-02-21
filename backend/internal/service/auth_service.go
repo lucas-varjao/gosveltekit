@@ -16,6 +16,7 @@ import (
 	"gosveltekit/internal/models"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 var (
@@ -24,6 +25,8 @@ var (
 	ErrInvalidToken       = errors.New("token inválido")
 	ErrExpiredToken       = errors.New("token expirado")
 )
+
+const resetTokenBytesLen = 32
 
 // AuthServiceInterface defines the methods that an auth service must implement
 type AuthServiceInterface interface {
@@ -120,22 +123,22 @@ func (s *AuthService) LogoutAll(userID string) error {
 }
 
 // Register creates a new user account
-func (s *AuthService) Register(username, email, password, displayName string) (*models.User, error) {
+func (s *AuthService) Register(username, emailAddr, password, displayName string) (*models.User, error) {
 	// Check if username already exists
 	if _, err := s.userAdapter.FindUserByIdentifier(username); err == nil {
 		return nil, errors.New("username already exists")
 	}
 
 	// Check if email already exists
-	if _, err := s.userAdapter.FindByEmail(email); err == nil {
+	if _, err := s.userAdapter.FindByEmail(emailAddr); err == nil {
 		return nil, errors.New("email already exists")
 	}
 
 	// Create user via adapter
 	userData, err := s.userAdapter.CreateUser(auth.CreateUserInput{
 		Identifier:  username,
-		Email:       email,
-		Password:    password,
+		Email:       emailAddr,
+		Passphrase:  password,
 		DisplayName: displayName,
 	})
 	if err != nil {
@@ -155,12 +158,15 @@ func (s *AuthService) Register(username, email, password, displayName string) (*
 func (s *AuthService) RequestPasswordReset(emailAddr string) error {
 	user, err := s.userAdapter.FindByEmail(emailAddr)
 	if err != nil {
-		// Don't reveal if email exists
-		return nil
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Don't reveal if email exists.
+			return nil
+		}
+		return err
 	}
 
 	// Generate reset token
-	tokenBytes := make([]byte, 32)
+	tokenBytes := make([]byte, resetTokenBytesLen)
 	_, err = s.generateSecureToken(tokenBytes)
 	if err != nil {
 		return err

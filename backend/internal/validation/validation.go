@@ -30,6 +30,15 @@ var (
 	ErrDisplayNameTooLong   = errors.New("nome de exibição não pode ter mais de 100 caracteres")
 )
 
+const (
+	minUsernameLength      = 3
+	maxUsernameLength      = 50
+	minPasswordLength      = 8
+	maxDisplayNameLength   = 100
+	minTokenLength         = 10
+	minLoginPasswordLength = 1
+)
+
 // List of common passwords to deny
 var commonPasswords = map[string]bool{
 	"password":    true,
@@ -50,11 +59,11 @@ func ValidateUsername(username string) error {
 		return ErrUsernameInvalid
 	}
 
-	if len(username) < 3 {
+	if len(username) < minUsernameLength {
 		return ErrUsernameTooShort
 	}
 
-	if len(username) > 50 {
+	if len(username) > maxUsernameLength {
 		return ErrUsernameTooLong
 	}
 
@@ -84,25 +93,12 @@ func ValidateEmail(email string) error {
 }
 
 // ValidatePassword ensures the password meets complexity requirements
-func ValidatePassword(password string, username string) error {
-	if len(password) < 8 {
+func ValidatePassword(password, username string) error {
+	if len(password) < minPasswordLength {
 		return ErrPasswordTooShort
 	}
 
-	var hasUpper, hasLower, hasNumber, hasSpecial bool
-	for _, char := range password {
-		switch {
-		case unicode.IsUpper(char):
-			hasUpper = true
-		case unicode.IsLower(char):
-			hasLower = true
-		case unicode.IsNumber(char):
-			hasNumber = true
-		case unicode.IsPunct(char) || unicode.IsSymbol(char):
-			hasSpecial = true
-		}
-	}
-
+	hasUpper, hasLower, hasNumber, hasSpecial := detectPasswordClasses(password)
 	if !hasUpper {
 		return ErrPasswordNoUppercase
 	}
@@ -116,21 +112,50 @@ func ValidatePassword(password string, username string) error {
 		return ErrPasswordNoSpecial
 	}
 
-	// Check if password is a common password - compare lowercase to match case-insensitively
-	passwordLower := strings.ToLower(password)
-	for commonPass := range commonPasswords {
-		if commonPass == passwordLower || strings.HasPrefix(passwordLower, commonPass) ||
-			strings.Contains(passwordLower, commonPass) {
-			return ErrPasswordCommonWord
-		}
+	if containsCommonPassword(password) {
+		return ErrPasswordCommonWord
 	}
 
-	// Only check if username is contained in password if username is provided
-	if username != "" && len(username) >= 3 && strings.Contains(strings.ToLower(password), strings.ToLower(username)) {
+	if containsUsername(password, username) {
 		return ErrPasswordContainsUser
 	}
 
 	return nil
+}
+
+func detectPasswordClasses(password string) (hasUpper, hasLower, hasNumber, hasSpecial bool) {
+	for _, char := range password {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsNumber(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+	return hasUpper, hasLower, hasNumber, hasSpecial
+}
+
+func containsCommonPassword(password string) bool {
+	passwordLower := strings.ToLower(password)
+	for commonPass := range commonPasswords {
+		if commonPass == passwordLower ||
+			strings.HasPrefix(passwordLower, commonPass) ||
+			strings.Contains(passwordLower, commonPass) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsUsername(password, username string) bool {
+	if username == "" || len(username) < minUsernameLength {
+		return false
+	}
+	return strings.Contains(strings.ToLower(password), strings.ToLower(username))
 }
 
 // ValidateDisplayName validates the display name
@@ -139,7 +164,7 @@ func ValidateDisplayName(name string) error {
 		return ErrDisplayNameInvalid
 	}
 
-	if len(name) > 100 {
+	if len(name) > maxDisplayNameLength {
 		return ErrDisplayNameTooLong
 	}
 
@@ -148,7 +173,7 @@ func ValidateDisplayName(name string) error {
 
 // ValidateRefreshToken performs basic validation on refresh tokens
 func ValidateRefreshToken(token string) error {
-	if token == "" || len(token) < 10 {
+	if token == "" || len(token) < minTokenLength {
 		return ErrRefreshTokenInvalid
 	}
 	return nil
@@ -156,7 +181,7 @@ func ValidateRefreshToken(token string) error {
 
 // ValidateResetToken performs basic validation on password reset tokens
 func ValidateResetToken(token string) error {
-	if token == "" || len(token) < 10 {
+	if token == "" || len(token) < minTokenLength {
 		return ErrResetTokenInvalid
 	}
 	return nil
@@ -170,7 +195,7 @@ func ValidateLoginRequest(username, password string) error {
 
 	// For login, we don't apply full password complexity checks
 	// since we're only verifying existing credentials
-	if password == "" || len(password) < 1 {
+	if password == "" || len(password) < minLoginPasswordLength {
 		return errors.New("senha não pode ser vazia")
 	}
 

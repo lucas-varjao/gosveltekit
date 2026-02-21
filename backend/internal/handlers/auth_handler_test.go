@@ -92,8 +92,8 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name: "Successful login",
 			request: LoginRequest{
-				Username: "testuser",
-				Password: "password123",
+				Username:   "testuser",
+				Passphrase: "password123",
 			},
 			setupMock: func(m *MockAuthService) {
 				m.LoginFunc = func(username, password, ip, userAgent string) (*service.LoginResponse, error) {
@@ -115,8 +115,8 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name: "Invalid credentials",
 			request: LoginRequest{
-				Username: "testuser",
-				Password: "wrongpass",
+				Username:   "testuser",
+				Passphrase: "wrongpass",
 			},
 			setupMock: func(m *MockAuthService) {
 				m.LoginFunc = func(username, password, ip, userAgent string) (*service.LoginResponse, error) {
@@ -131,8 +131,8 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name: "Inactive user",
 			request: LoginRequest{
-				Username: "inactive",
-				Password: "password123",
+				Username:   "inactive",
+				Passphrase: "password123",
 			},
 			setupMock: func(m *MockAuthService) {
 				m.LoginFunc = func(username, password, ip, userAgent string) (*service.LoginResponse, error) {
@@ -147,8 +147,8 @@ func TestAuthHandler_Login(t *testing.T) {
 		{
 			name: "Account locked",
 			request: LoginRequest{
-				Username: "locked",
-				Password: "password123",
+				Username:   "locked",
+				Passphrase: "password123",
 			},
 			setupMock: func(m *MockAuthService) {
 				m.LoginFunc = func(username, password, ip, userAgent string) (*service.LoginResponse, error) {
@@ -294,7 +294,7 @@ func TestAuthHandler_Register(t *testing.T) {
 			request: RegistrationRequest{
 				Username:    "newuser",
 				Email:       "new@example.com",
-				Password:    "Padasdasdasdd123!",
+				Passphrase:  "Padasdasdasdd123!",
 				DisplayName: "New User",
 			},
 			setupMock: func(m *MockAuthService) {
@@ -317,7 +317,7 @@ func TestAuthHandler_Register(t *testing.T) {
 			request: RegistrationRequest{
 				Username:    "existinguser",
 				Email:       "new@example.com",
-				Password:    "@aSdasdsads123!",
+				Passphrase:  "@aSdasdsads123!",
 				DisplayName: "New User",
 			},
 			setupMock: func(m *MockAuthService) {

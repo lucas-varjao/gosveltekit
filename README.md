@@ -52,7 +52,7 @@ docker-compose up
 ```bash
 cd backend
 go mod download
-go run cmd/server/server.go
+go run main.go
 ```
 
 #### Frontend
@@ -68,7 +68,7 @@ bun run dev
 ```bash
 gosveltekit/
 ├── backend/
-│   ├── cmd/server/           # Ponto de entrada
+│   ├── main.go               # Ponto de entrada
 │   └── internal/
 │       ├── auth/             # Sistema de autenticação
 │       │   ├── interfaces.go # UserAdapter, SessionAdapter

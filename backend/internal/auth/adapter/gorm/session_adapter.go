@@ -1,6 +1,7 @@
 package gorm
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -54,7 +55,7 @@ func (a *SessionAdapter) CreateSession(userID string, expiresAt time.Time, metad
 func (a *SessionAdapter) GetSession(sessionID string) (*auth.Session, error) {
 	var session models.Session
 	if err := a.db.Where("id = ?", sessionID).First(&session).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, auth.ErrSessionNotFound
 		}
 		return nil, err

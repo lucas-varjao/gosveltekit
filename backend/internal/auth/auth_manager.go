@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const sessionIDBytesLen = 32
+
 // AuthConfig holds configuration for the auth manager
 type AuthConfig struct {
 	SessionDuration   time.Duration // Default: 30 days
@@ -150,7 +152,7 @@ func (m *AuthManager) GetSessionAdapter() SessionAdapter {
 
 // GenerateSessionID generates a cryptographically secure session ID
 func GenerateSessionID() (string, error) {
-	bytes := make([]byte, 32)
+	bytes := make([]byte, sessionIDBytesLen)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}

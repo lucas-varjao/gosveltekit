@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"gosveltekit/internal/auth"
@@ -25,23 +26,27 @@ func NewAuthHandler(authService service.AuthServiceInterface) *AuthHandler {
 // LoginRequest represents the login request body
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	//nolint:gosec // API contract requires json key "password".
+	Passphrase string `json:"password" binding:"required"`
 }
 
 // RegistrationRequest represents the registration request body
 type RegistrationRequest struct {
-	Username    string `json:"username" binding:"required"`
-	Email       string `json:"email" binding:"required"`
-	Password    string `json:"password" binding:"required"`
+	Username string `json:"username" binding:"required"`
+	Email    string `json:"email"    binding:"required"`
+	//nolint:gosec // API contract requires json key "password".
+	Passphrase  string `json:"password"     binding:"required"`
 	DisplayName string `json:"display_name" binding:"required"`
 }
 
 // PasswordResetRequest represents the password reset request body
 type PasswordResetRequest struct {
-	Token           string `json:"token" binding:"required"`
-	NewPassword     string `json:"new_password" binding:"required"`
+	Token           string `json:"token"            binding:"required"`
+	NewPassword     string `json:"new_password"     binding:"required"`
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
+
+const sessionCookieMaxAgeSeconds = 30 * 24 * 60 * 60
 
 // Login handles user authentication with input validation
 func (h *AuthHandler) Login(c *gin.Context) {
@@ -52,7 +57,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Validate input data before attempting login
-	if err := validation.ValidateLoginRequest(req.Username, req.Password); err != nil {
+	if err := validation.ValidateLoginRequest(req.Username, req.Passphrase); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -61,13 +66,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	ip := c.ClientIP()
 	userAgent := c.Request.UserAgent()
 
-	response, err := h.authService.Login(req.Username, req.Password, ip, userAgent)
+	response, err := h.authService.Login(req.Username, req.Passphrase, ip, userAgent)
 	if err != nil {
 		status := http.StatusUnauthorized
 		message := "credenciais inválidas"
 
 		switch {
-		case err == service.ErrUserNotActive:
+		case errors.Is(err, service.ErrUserNotActive):
 			message = "usuário inativo"
 		case err.Error() == "conta temporariamente bloqueada, tente novamente mais tarde":
 			message = err.Error()
@@ -81,7 +86,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.SetCookie(
 		middleware.SessionCookieName,
 		response.SessionID,
-		30*24*60*60, // 30 days
+		sessionCookieMaxAgeSeconds, // 30 days
 		"/",
 		"",
 		true, // secure
@@ -122,7 +127,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err := validation.ValidateRegistrationRequest(
 		req.Username,
 		req.Email,
-		req.Password,
+		req.Passphrase,
 		req.DisplayName,
 	); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -130,7 +135,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// Forward to service layer
-	user, err := h.authService.Register(req.Username, req.Email, req.Password, req.DisplayName)
+	user, err := h.authService.Register(req.Username, req.Email, req.Passphrase, req.DisplayName)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -190,9 +195,9 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		message := "falha ao redefinir senha"
 
 		switch {
-		case err == service.ErrInvalidToken:
+		case errors.Is(err, service.ErrInvalidToken):
 			message = "token inválido"
-		case err == service.ErrExpiredToken:
+		case errors.Is(err, service.ErrExpiredToken):
 			message = "token expirado"
 		}
 
