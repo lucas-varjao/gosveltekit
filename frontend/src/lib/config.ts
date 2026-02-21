@@ -6,15 +6,15 @@
 
 // API configuration
 export const API_CONFIG = {
-	// Base URL for API requests - use environment variable or default
-	baseUrl: import.meta.env.VITE_API_URL || '',
+    // Base URL for API requests - use environment variable or default
+    baseUrl: import.meta.env.VITE_API_URL || '',
 
-	// Default request timeout in milliseconds
-	timeout: 30000
-};
+    // Default request timeout in milliseconds
+    timeout: 30000
+}
 
 // Feature flags
 export const FEATURES = {
-	enableRegistration: true,
-	enablePasswordReset: true
-};
+    enableRegistration: true,
+    enablePasswordReset: true
+}
