@@ -4,6 +4,7 @@
     import '../app.css'
     import { authStore } from '$lib/stores/auth'
     import { goto } from '$app/navigation'
+    import { resolve } from '$app/paths'
 
     let { children } = $props()
 
@@ -16,7 +17,7 @@
         try {
             await authStore.logout()
 
-            goto('/login')
+            goto(resolve('/login'))
         } catch (error) {
             console.error('Logout failed:', error)
         }
@@ -27,7 +28,7 @@
     <header class="border-b border-slate-800">
         <div class="container mx-auto px-4 py-4">
             <nav class="flex items-center justify-between">
-                <div class="text-xl font-bold"><a href="/">GoSvelteKit</a></div>
+                <div class="text-xl font-bold"><a href={resolve('/')}>GoSvelteKit</a></div>
                 <div class="text-xl font-bold">
                     {#if isLoading}
                         <div
@@ -42,7 +43,9 @@
                             class="text-base text-slate-400 hover:text-white">Sign Out</button
                         >
                     {:else}
-                        <a href="/login" class="text-slate-400 hover:text-white">Sign In</a>
+                        <a href={resolve('/login')} class="text-slate-400 hover:text-white">
+                            Sign In
+                        </a>
                     {/if}
                 </div>
             </nav>

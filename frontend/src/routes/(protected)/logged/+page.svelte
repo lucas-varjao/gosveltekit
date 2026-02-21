@@ -3,6 +3,7 @@
 <script lang="ts">
     import { authStore } from '$lib/stores/auth'
     import { goto } from '$app/navigation'
+    import { resolve } from '$app/paths'
     import { onMount } from 'svelte'
     import { apiRequest } from '$lib/api/client'
 
@@ -51,7 +52,7 @@
         try {
             await authStore.logout()
 
-            goto('/login')
+            goto(resolve('/login'))
         } catch (error) {
             console.error('Logout failed:', error)
         }

@@ -2,6 +2,7 @@
 
 <script lang="ts">
     import { slide } from 'svelte/transition'
+    import { resolve } from '$app/paths'
     import { authApi } from '$lib/api/auth'
 
     // State declaration using Svelte 5 runes
@@ -106,7 +107,7 @@
                             Request another reset link
                         </button>
 
-                        <a href="/login" class="text-slate-400 hover:text-slate-300">
+                        <a href={resolve('/login')} class="text-slate-400 hover:text-slate-300">
                             Return to login
                         </a>
                     </div>
@@ -160,7 +161,10 @@
 
                     <!-- Back to Login -->
                     <div class="flex justify-center">
-                        <a href="/login" class="font-medium text-blue-500 hover:text-blue-400">
+                        <a
+                            href={resolve('/login')}
+                            class="font-medium text-blue-500 hover:text-blue-400"
+                        >
                             Back to Login
                         </a>
                     </div>

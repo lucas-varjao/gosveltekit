@@ -4,6 +4,7 @@
     import { slide } from 'svelte/transition'
     import { page } from '$app/state'
     import { goto } from '$app/navigation'
+    import { resolve } from '$app/paths'
     import { authApi } from '$lib/api/auth'
 
     // State declaration using Svelte 5 runes
@@ -152,7 +153,7 @@
 
                 // Will redirect after a delay
                 setTimeout(() => {
-                    goto('/login')
+                    goto(resolve('/login'))
                 }, 3000)
             } catch (error) {
                 console.error('Password reset error:', error)
@@ -193,7 +194,7 @@
 
                 <div class="flex justify-center">
                     <a
-                        href="/forgot-password"
+                        href={resolve('/forgot-password')}
                         class="font-medium text-blue-500 hover:text-blue-400"
                     >
                         Request a new reset link
@@ -584,7 +585,10 @@
 
                     <!-- Back to Login -->
                     <div class="flex justify-center">
-                        <a href="/login" class="font-medium text-blue-500 hover:text-blue-400">
+                        <a
+                            href={resolve('/login')}
+                            class="font-medium text-blue-500 hover:text-blue-400"
+                        >
                             Back to Login
                         </a>
                     </div>

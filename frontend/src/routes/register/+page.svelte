@@ -2,6 +2,7 @@
 
 <script lang="ts">
     import { goto } from '$app/navigation'
+    import { resolve } from '$app/paths'
     import { slide } from 'svelte/transition'
     import { authStore } from '$lib/stores/auth'
 
@@ -219,7 +220,7 @@
                 submitted = false
 
                 // Show success message or redirect
-                goto('/login')
+                goto(resolve('/login'))
             } catch (error) {
                 console.error('Registration error:', error)
                 registerError =
@@ -243,7 +244,9 @@
             <!-- Login Link -->
             <div class="text-center text-slate-400">
                 Already have an account?
-                <a href="/login" class="font-medium text-blue-500 hover:text-blue-400"> Login </a>
+                <a href={resolve('/login')} class="font-medium text-blue-500 hover:text-blue-400">
+                    Login
+                </a>
             </div>
 
             {#if registerError}

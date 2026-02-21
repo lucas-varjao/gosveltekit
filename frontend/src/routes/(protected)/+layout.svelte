@@ -3,17 +3,15 @@
 <script lang="ts">
     import { browser } from '$app/environment'
     import { goto } from '$app/navigation'
+    import { resolve } from '$app/paths'
     import { authStore } from '$lib/stores/auth'
-    import { page } from '$app/state'
 
     let { children } = $props()
 
     // Redirect to login if not authenticated
     $effect(() => {
         if (browser && !$authStore.isLoading && !$authStore.isAuthenticated) {
-            // Save the current URL to redirect back after login
-            const returnUrl = page.url.pathname + page.url.search
-            goto(`/login?returnUrl=${encodeURIComponent(returnUrl)}`)
+            goto(resolve('/login'))
         }
     })
 </script>

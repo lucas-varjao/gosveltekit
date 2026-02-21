@@ -3,6 +3,7 @@
 <script lang="ts">
     import { slide } from 'svelte/transition'
     import { goto } from '$app/navigation'
+    import { resolve } from '$app/paths'
     import { authStore } from '$lib/stores/auth'
 
     // State declaration using Svelte 5 runes
@@ -84,7 +85,7 @@
                 await authStore.login(username, password)
 
                 // Redirect to home page after successful login
-                goto('/logged')
+                goto(resolve('/logged'))
             } catch (error) {
                 console.error('Login error:', error)
                 authError =
@@ -106,7 +107,10 @@
             <!-- Register Link -->
             <div class="text-center text-slate-400">
                 Don't have an account?
-                <a href="/register" class="font-medium text-blue-500 hover:text-blue-400">
+                <a
+                    href={resolve('/register')}
+                    class="font-medium text-blue-500 hover:text-blue-400"
+                >
                     Create an account
                 </a>
             </div>
@@ -214,7 +218,10 @@
 
                 <!-- Forgot Password Link -->
                 <div class="flex justify-end">
-                    <a href="/forgot-password" class="text-sm text-blue-500 hover:text-blue-400">
+                    <a
+                        href={resolve('/forgot-password')}
+                        class="text-sm text-blue-500 hover:text-blue-400"
+                    >
                         Forgot your password?
                     </a>
                 </div>

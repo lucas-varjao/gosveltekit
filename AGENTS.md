@@ -17,9 +17,9 @@ GoSvelteKit is a template/base project with a Golang backend and SvelteKit (Svel
 - Sempre priorizar variáveis de ambiente para todas as chaves de configuração.
 - Quando a variável não existir, usar o valor do arquivo `backend/configs/app.yml`.
 - Convenção de nomes: chaves aninhadas viram env em uppercase com `_`:
-  - `server.port` -> `SERVER_PORT`
-  - `auth.session_ttl` -> `AUTH_SESSION_TTL`
-  - `email.smtp_host` -> `EMAIL_SMTP_HOST`
+    - `server.port` -> `SERVER_PORT`
+    - `auth.session_ttl` -> `AUTH_SESSION_TTL`
+    - `email.smtp_host` -> `EMAIL_SMTP_HOST`
 - Banco: `DATABASE_DSN` é o nome preferencial; `DATABASE_URL` é alias compatível.
 
 ### Authentication Architecture
