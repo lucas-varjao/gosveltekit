@@ -7,12 +7,14 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"gosveltekit/internal/auth"
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
 	"gosveltekit/internal/email"
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/validation"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -23,6 +25,8 @@ var (
 	ErrUserNotActive      = errors.New("usuário inativo")
 	ErrInvalidToken       = errors.New("token inválido")
 	ErrExpiredToken       = errors.New("token expirado")
+	ErrAccessDenied       = errors.New("acesso negado")
+	ErrWrongPassword      = errors.New("senha atual incorreta")
 )
 
 const resetTokenBytesLen = 32
@@ -36,25 +40,33 @@ type AuthServiceInterface interface {
 	Register(username, email, password, displayName string) (*models.User, error)
 	RequestPasswordReset(email string) error
 	ResetPassword(token, newPassword string) error
+	GetProfile(userID string) (*AccountProfile, error)
+	UpdateProfile(userID string, input UpdateProfileInput) (*AccountProfile, error)
+	ChangePassword(userID string, input ChangePasswordInput) error
+	ListSessions(userID, currentSessionID string) ([]SessionInfo, error)
+	RevokeSession(userID, sessionID, currentSessionID string) error
 }
 
 // AuthService handles authentication business logic
 type AuthService struct {
-	authManager  *auth.AuthManager
-	userAdapter  *gormadapter.UserAdapter
-	emailService email.EmailServiceInterface
+	authManager    *auth.AuthManager
+	sessionAdapter *gormadapter.SessionAdapter
+	userAdapter    *gormadapter.UserAdapter
+	emailService   email.EmailServiceInterface
 }
 
 // NewAuthService creates a new AuthService instance
 func NewAuthService(
 	authManager *auth.AuthManager,
+	sessionAdapter *gormadapter.SessionAdapter,
 	userAdapter *gormadapter.UserAdapter,
 	emailService email.EmailServiceInterface,
 ) *AuthService {
 	return &AuthService{
-		authManager:  authManager,
-		userAdapter:  userAdapter,
-		emailService: emailService,
+		authManager:    authManager,
+		sessionAdapter: sessionAdapter,
+		userAdapter:    userAdapter,
+		emailService:   emailService,
 	}
 }
 
@@ -63,6 +75,45 @@ type LoginResponse struct {
 	SessionID string        `json:"session_id"`
 	ExpiresAt time.Time     `json:"expires_at"`
 	User      auth.UserData `json:"user"`
+}
+
+// AccountProfile is the shape returned by account profile endpoints.
+type AccountProfile struct {
+	ID            string    `json:"id"`
+	Identifier    string    `json:"identifier"`
+	Email         string    `json:"email"`
+	DisplayName   string    `json:"display_name"`
+	Role          string    `json:"role"`
+	Active        bool      `json:"active"`
+	FirstName     string    `json:"first_name,omitempty"`
+	LastName      string    `json:"last_name,omitempty"`
+	EmailVerified bool      `json:"email_verified"`
+	LastLogin     time.Time `json:"last_login"`
+	LastActive    time.Time `json:"last_active"`
+}
+
+// UpdateProfileInput defines writable account profile fields.
+type UpdateProfileInput struct {
+	DisplayName *string
+	FirstName   *string
+	LastName    *string
+}
+
+// ChangePasswordInput defines payload for changing password.
+type ChangePasswordInput struct {
+	CurrentPassword string
+	NewPassword     string
+	ConfirmPassword string
+}
+
+// SessionInfo defines account session metadata returned to frontend.
+type SessionInfo struct {
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	UserAgent string    `json:"user_agent,omitempty"`
+	IP        string    `json:"ip,omitempty"`
+	IsCurrent bool      `json:"is_current"`
 }
 
 // Login authenticates a user and creates a session
@@ -235,6 +286,107 @@ func (s *AuthService) ResetPassword(tokenFromUser, newPassword string) error {
 	return s.userAdapter.UpdateUser(matchedUser)
 }
 
+// GetProfile returns profile information for the authenticated user.
+func (s *AuthService) GetProfile(userID string) (*AccountProfile, error) {
+	user, err := s.userAdapter.GetUserModel(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return toAccountProfile(user), nil
+}
+
+// UpdateProfile applies partial profile updates to the authenticated user.
+func (s *AuthService) UpdateProfile(userID string, input UpdateProfileInput) (*AccountProfile, error) {
+	user, err := s.userAdapter.GetUserModel(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if input.DisplayName != nil {
+		displayName := strings.TrimSpace(*input.DisplayName)
+		if err := validation.ValidateDisplayName(displayName); err != nil {
+			return nil, err
+		}
+		user.DisplayName = displayName
+	}
+
+	if input.FirstName != nil {
+		user.FirstName = strings.TrimSpace(*input.FirstName)
+	}
+
+	if input.LastName != nil {
+		user.LastName = strings.TrimSpace(*input.LastName)
+	}
+
+	if err := s.userAdapter.UpdateUser(user); err != nil {
+		return nil, err
+	}
+
+	return toAccountProfile(user), nil
+}
+
+// ChangePassword updates password for an authenticated user.
+func (s *AuthService) ChangePassword(userID string, input ChangePasswordInput) error {
+	if input.NewPassword != input.ConfirmPassword {
+		return errors.New("as senhas não coincidem")
+	}
+
+	user, err := s.userAdapter.GetUserModel(userID)
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.CurrentPassword)); err != nil {
+		return ErrWrongPassword
+	}
+
+	if err := validation.ValidatePassword(input.NewPassword, user.Username); err != nil {
+		return err
+	}
+
+	if err := s.userAdapter.UpdatePassword(userID, input.NewPassword); err != nil {
+		return err
+	}
+
+	// Invalidate all sessions (including current) after password change.
+	return s.authManager.LogoutAll(userID)
+}
+
+// ListSessions returns all sessions for the authenticated user.
+func (s *AuthService) ListSessions(userID, currentSessionID string) ([]SessionInfo, error) {
+	sessions, err := s.sessionAdapter.ListUserSessions(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]SessionInfo, 0, len(sessions))
+	for _, session := range sessions {
+		result = append(result, SessionInfo{
+			ID:        session.ID,
+			CreatedAt: session.CreatedAt,
+			ExpiresAt: session.ExpiresAt,
+			UserAgent: session.UserAgent,
+			IP:        session.IP,
+			IsCurrent: session.ID == currentSessionID,
+		})
+	}
+
+	return result, nil
+}
+
+// RevokeSession removes one user-owned session.
+func (s *AuthService) RevokeSession(userID, sessionID, _ string) error {
+	if _, err := s.sessionAdapter.GetUserSession(sessionID, userID); err != nil {
+		if errors.Is(err, auth.ErrSessionNotFound) {
+			return ErrAccessDenied
+		}
+		return err
+	}
+
+	return s.sessionAdapter.DeleteSession(sessionID)
+}
+
 // Helper methods
 
 func (s *AuthService) generateSecureToken(b []byte) (int, error) {
@@ -251,4 +403,20 @@ func ConvertToPublicUser(user *models.User) *models.User {
 	user.PasswordHash = ""
 	user.ResetToken = ""
 	return user
+}
+
+func toAccountProfile(user *models.User) *AccountProfile {
+	return &AccountProfile{
+		ID:            strconv.FormatUint(uint64(user.ID), 10),
+		Identifier:    user.Username,
+		Email:         user.Email,
+		DisplayName:   user.DisplayName,
+		Role:          user.Role,
+		Active:        user.Active,
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
+		EmailVerified: user.EmailVerified,
+		LastLogin:     user.LastLogin,
+		LastActive:    user.LastActive,
+	}
 }

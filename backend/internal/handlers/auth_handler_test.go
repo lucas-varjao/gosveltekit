@@ -27,34 +27,98 @@ type MockAuthService struct {
 	RegisterFunc             func(username, email, password, displayName string) (*models.User, error)
 	RequestPasswordResetFunc func(email string) error
 	ResetPasswordFunc        func(token, newPassword string) error
+	GetProfileFunc           func(userID string) (*service.AccountProfile, error)
+	UpdateProfileFunc        func(userID string, input service.UpdateProfileInput) (*service.AccountProfile, error)
+	ChangePasswordFunc       func(userID string, input service.ChangePasswordInput) error
+	ListSessionsFunc         func(userID, currentSessionID string) ([]service.SessionInfo, error)
+	RevokeSessionFunc        func(userID, sessionID, currentSessionID string) error
 }
 
 func (m *MockAuthService) Login(username, password, ip, userAgent string) (*service.LoginResponse, error) {
+	if m.LoginFunc == nil {
+		return nil, nil
+	}
 	return m.LoginFunc(username, password, ip, userAgent)
 }
 
 func (m *MockAuthService) ValidateSession(sessionID string) (*auth.Session, *auth.UserData, error) {
+	if m.ValidateSessionFunc == nil {
+		return nil, nil, nil
+	}
 	return m.ValidateSessionFunc(sessionID)
 }
 
 func (m *MockAuthService) Logout(sessionID string) error {
+	if m.LogoutFunc == nil {
+		return nil
+	}
 	return m.LogoutFunc(sessionID)
 }
 
 func (m *MockAuthService) LogoutAll(userID string) error {
+	if m.LogoutAllFunc == nil {
+		return nil
+	}
 	return m.LogoutAllFunc(userID)
 }
 
 func (m *MockAuthService) Register(username, email, password, displayName string) (*models.User, error) {
+	if m.RegisterFunc == nil {
+		return nil, nil
+	}
 	return m.RegisterFunc(username, email, password, displayName)
 }
 
 func (m *MockAuthService) RequestPasswordReset(email string) error {
+	if m.RequestPasswordResetFunc == nil {
+		return nil
+	}
 	return m.RequestPasswordResetFunc(email)
 }
 
 func (m *MockAuthService) ResetPassword(token, newPassword string) error {
+	if m.ResetPasswordFunc == nil {
+		return nil
+	}
 	return m.ResetPasswordFunc(token, newPassword)
+}
+
+func (m *MockAuthService) GetProfile(userID string) (*service.AccountProfile, error) {
+	if m.GetProfileFunc == nil {
+		return nil, nil
+	}
+	return m.GetProfileFunc(userID)
+}
+
+func (m *MockAuthService) UpdateProfile(
+	userID string,
+	input service.UpdateProfileInput,
+) (*service.AccountProfile, error) {
+	if m.UpdateProfileFunc == nil {
+		return nil, nil
+	}
+	return m.UpdateProfileFunc(userID, input)
+}
+
+func (m *MockAuthService) ChangePassword(userID string, input service.ChangePasswordInput) error {
+	if m.ChangePasswordFunc == nil {
+		return nil
+	}
+	return m.ChangePasswordFunc(userID, input)
+}
+
+func (m *MockAuthService) ListSessions(userID, currentSessionID string) ([]service.SessionInfo, error) {
+	if m.ListSessionsFunc == nil {
+		return nil, nil
+	}
+	return m.ListSessionsFunc(userID, currentSessionID)
+}
+
+func (m *MockAuthService) RevokeSession(userID, sessionID, currentSessionID string) error {
+	if m.RevokeSessionFunc == nil {
+		return nil
+	}
+	return m.RevokeSessionFunc(userID, sessionID, currentSessionID)
 }
 
 func setupTestRouter() (*gin.Context, *httptest.ResponseRecorder) {

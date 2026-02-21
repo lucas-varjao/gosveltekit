@@ -64,6 +64,55 @@ func (m *MockAuthService) ResetPassword(token, newPassword string) error {
 	return nil
 }
 
+func (m *MockAuthService) GetProfile(userID string) (*service.AccountProfile, error) {
+	return &service.AccountProfile{
+		ID:          userID,
+		Identifier:  "testuser",
+		Email:       "test@example.com",
+		DisplayName: "Test User",
+		Role:        "user",
+		Active:      true,
+	}, nil
+}
+
+func (m *MockAuthService) UpdateProfile(
+	userID string,
+	input service.UpdateProfileInput,
+) (*service.AccountProfile, error) {
+	displayName := "Test User"
+	if input.DisplayName != nil {
+		displayName = *input.DisplayName
+	}
+
+	return &service.AccountProfile{
+		ID:          userID,
+		Identifier:  "testuser",
+		Email:       "test@example.com",
+		DisplayName: displayName,
+		Role:        "user",
+		Active:      true,
+	}, nil
+}
+
+func (m *MockAuthService) ChangePassword(userID string, input service.ChangePasswordInput) error {
+	return nil
+}
+
+func (m *MockAuthService) ListSessions(userID, currentSessionID string) ([]service.SessionInfo, error) {
+	return []service.SessionInfo{
+		{
+			ID:        currentSessionID,
+			CreatedAt: time.Now().Add(-time.Hour),
+			ExpiresAt: time.Now().Add(time.Hour),
+			IsCurrent: true,
+		},
+	}, nil
+}
+
+func (m *MockAuthService) RevokeSession(userID, sessionID, currentSessionID string) error {
+	return nil
+}
+
 func NewMockAuthHandler() *handlers.AuthHandler {
 	mockAuthService := &MockAuthService{}
 	return handlers.NewAuthHandler(mockAuthService)

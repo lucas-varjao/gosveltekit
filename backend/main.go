@@ -87,7 +87,7 @@ func main() {
 
 	// Initialize services
 	emailService := email.NewEmailService(cfg)
-	authService := service.NewAuthService(authManager, userAdapter, emailService)
+	authService := service.NewAuthService(authManager, sessionAdapter, userAdapter, emailService)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService, cfg.Auth.CookieSecure)

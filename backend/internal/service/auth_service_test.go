@@ -25,7 +25,7 @@ func setupTest(t *testing.T) (*AuthService, *auth.AuthManager, *gormadapter.User
 	authConfig := auth.DefaultAuthConfig()
 	authManager := auth.NewAuthManager(userAdapter, sessionAdapter, authConfig)
 	mockEmailService := email.NewMockEmailService()
-	authService := NewAuthService(authManager, userAdapter, mockEmailService)
+	authService := NewAuthService(authManager, sessionAdapter, userAdapter, mockEmailService)
 
 	return authService, authManager, userAdapter, sessionAdapter, mockEmailService, db
 }
@@ -54,6 +54,7 @@ func TestNewAuthService(t *testing.T) {
 	authService, _, _, _, _, _ := setupTest(t)
 	assert.NotNil(t, authService)
 	assert.NotNil(t, authService.authManager)
+	assert.NotNil(t, authService.sessionAdapter)
 	assert.NotNil(t, authService.userAdapter)
 	assert.NotNil(t, authService.emailService)
 }

@@ -37,7 +37,7 @@ func setupIntegrationTest(t *testing.T) (*gin.Engine, *gorm.DB, *auth.AuthManage
 
 	// Setup services
 	emailService := email.NewMockEmailService()
-	authService := service.NewAuthService(authManager, userAdapter, emailService)
+	authService := service.NewAuthService(authManager, sessionAdapter, userAdapter, emailService)
 	authHandler := handlers.NewAuthHandler(authService)
 
 	// Setup router
@@ -60,6 +60,7 @@ func TestCompleteAuthFlow(t *testing.T) {
 	jsonData, _ := json.Marshal(registration)
 	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.21:1234"
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -72,6 +73,7 @@ func TestCompleteAuthFlow(t *testing.T) {
 	jsonData, _ = json.Marshal(login)
 	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.22:1234"
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -232,6 +234,7 @@ func TestGetCurrentUser(t *testing.T) {
 	jsonData, _ = json.Marshal(login)
 	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.23:1234"
 	r.ServeHTTP(w, req)
 
 	var loginResponse map[string]any
@@ -249,4 +252,226 @@ func TestGetCurrentUser(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &userResponse)
 	require.NoError(t, err)
 	assert.Equal(t, "meuser", userResponse["identifier"])
+}
+
+func TestAccountEndpointsFlow(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r, _, _, _ := setupIntegrationTest(t)
+
+	registration := map[string]any{
+		"username":     "accountuser",
+		"email":        "account@example.com",
+		"password":     "Test123!@#",
+		"display_name": "Account User",
+	}
+
+	w := httptest.NewRecorder()
+	jsonData, _ := json.Marshal(registration)
+	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	login := map[string]any{
+		"username": "accountuser",
+		"password": "Test123!@#",
+	}
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(login)
+	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.24:1234"
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var loginResponse map[string]any
+	err := json.Unmarshal(w.Body.Bytes(), &loginResponse)
+	require.NoError(t, err)
+	firstSessionID := loginResponse["session_id"].(string)
+
+	// 1. Get profile
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/account/profile", nil)
+	req.Header.Set("Authorization", "Bearer "+firstSessionID)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var profile map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &profile)
+	require.NoError(t, err)
+	assert.Equal(t, "accountuser", profile["identifier"])
+
+	// 2. Update profile
+	updateProfile := map[string]any{
+		"display_name": "Account User Updated",
+		"first_name":   "Account",
+		"last_name":    "User",
+	}
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(updateProfile)
+	req, _ = http.NewRequest("PATCH", "/api/account/profile", bytes.NewBuffer(jsonData))
+	req.Header.Set("Authorization", "Bearer "+firstSessionID)
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var updatedProfile map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &updatedProfile)
+	require.NoError(t, err)
+	assert.Equal(t, "Account User Updated", updatedProfile["display_name"])
+	assert.Equal(t, "Account", updatedProfile["first_name"])
+	assert.Equal(t, "User", updatedProfile["last_name"])
+
+	// 3. Change password
+	changePasswordPayload := map[string]any{
+		"current_password": "Test123!@#",
+		"new_password":     "ComplexN3w!A",
+		"confirm_password": "ComplexN3w!A",
+	}
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(changePasswordPayload)
+	req, _ = http.NewRequest("POST", "/api/account/change-password", bytes.NewBuffer(jsonData))
+	req.Header.Set("Authorization", "Bearer "+firstSessionID)
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	// Session should be invalid after password change.
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/account/profile", nil)
+	req.Header.Set("Authorization", "Bearer "+firstSessionID)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusUnauthorized, w.Code)
+
+	// 4. Login with new password
+	loginWithNewPassword := map[string]any{
+		"username": "accountuser",
+		"password": "ComplexN3w!A",
+	}
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(loginWithNewPassword)
+	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &loginResponse)
+	require.NoError(t, err)
+	secondSessionID := loginResponse["session_id"].(string)
+
+	// 5. Create one more session to test revocation.
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(loginWithNewPassword)
+	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &loginResponse)
+	require.NoError(t, err)
+	thirdSessionID := loginResponse["session_id"].(string)
+
+	// 6. List sessions
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/account/sessions", nil)
+	req.Header.Set("Authorization", "Bearer "+thirdSessionID)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var sessions []map[string]any
+	err = json.Unmarshal(w.Body.Bytes(), &sessions)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(sessions), 2)
+
+	// 7. Revoke one non-current session
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("DELETE", "/api/account/sessions/"+secondSessionID, nil)
+	req.Header.Set("Authorization", "Bearer "+thirdSessionID)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	// Ensure revoked session no longer exists in list.
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/account/sessions", nil)
+	req.Header.Set("Authorization", "Bearer "+thirdSessionID)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	err = json.Unmarshal(w.Body.Bytes(), &sessions)
+	require.NoError(t, err)
+	for _, session := range sessions {
+		assert.NotEqual(t, secondSessionID, session["id"])
+	}
+}
+
+func TestAdminDashboardAccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r, db, _, _ := setupIntegrationTest(t)
+
+	adminHash, err := bcrypt.GenerateFromPassword([]byte("Admin123!@#"), bcrypt.DefaultCost)
+	require.NoError(t, err)
+
+	adminUser := &models.User{
+		Username:     "adminuser",
+		Email:        "admin@example.com",
+		PasswordHash: string(adminHash),
+		DisplayName:  "Admin User",
+		Active:       true,
+		Role:         "admin",
+	}
+	require.NoError(t, db.Create(adminUser).Error)
+
+	userRegistration := map[string]any{
+		"username":     "regularuser",
+		"email":        "regular@example.com",
+		"password":     "Test123!@#",
+		"display_name": "Regular User",
+	}
+	w := httptest.NewRecorder()
+	jsonData, _ := json.Marshal(userRegistration)
+	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.31:1234"
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	regularLogin := map[string]any{
+		"username": "regularuser",
+		"password": "Test123!@#",
+	}
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(regularLogin)
+	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.32:1234"
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	regularSession := response["session_id"].(string)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/admin/dashboard", nil)
+	req.Header.Set("Authorization", "Bearer "+regularSession)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	adminLogin := map[string]any{
+		"username": "adminuser",
+		"password": "Admin123!@#",
+	}
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(adminLogin)
+	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.33:1234"
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	adminSession := response["session_id"].(string)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/admin/dashboard", nil)
+	req.Header.Set("Authorization", "Bearer "+adminSession)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
 }

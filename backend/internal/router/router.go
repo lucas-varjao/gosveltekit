@@ -90,6 +90,11 @@ func SetupRouter(
 
 	api.GET("/me", authHandler.GetCurrentUser)
 	api.POST("/logout", authHandler.Logout)
+	api.GET("/account/profile", authHandler.GetAccountProfile)
+	api.PATCH("/account/profile", authHandler.UpdateAccountProfile)
+	api.POST("/account/change-password", authHandler.ChangeAccountPassword)
+	api.GET("/account/sessions", authHandler.ListAccountSessions)
+	api.DELETE("/account/sessions/:session_id", authHandler.RevokeAccountSession)
 
 	// Admin only routes
 	admin := api.Group("/admin")

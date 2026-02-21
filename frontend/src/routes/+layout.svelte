@@ -28,8 +28,20 @@
     <header class="border-b border-slate-800">
         <div class="container mx-auto px-4 py-4">
             <nav class="flex items-center justify-between">
-                <div class="text-xl font-bold"><a href={resolve('/')}>GoSvelteKit</a></div>
-                <div class="text-xl font-bold">
+                <div class="flex items-center gap-6">
+                    <div class="text-xl font-bold"><a href={resolve('/')}>GoSvelteKit</a></div>
+                    <div class="hidden items-center gap-4 text-sm text-slate-400 md:flex">
+                        <a href={resolve('/')} class="hover:text-white">Home</a>
+                        <a href={resolve('/status')} class="hover:text-white">Status</a>
+                        {#if isAuthenticated}
+                            <a href={resolve('/profile')} class="hover:text-white">Profile</a>
+                            <a href={resolve('/settings')} class="hover:text-white">Settings</a>
+                            <a href={resolve('/admin')} class="hover:text-white">Admin</a>
+                        {/if}
+                    </div>
+                </div>
+
+                <div class="text-sm font-semibold">
                     {#if isLoading}
                         <div
                             class="h-4 w-4 animate-spin rounded-full border-4 border-slate-700 border-t-slate-300"
@@ -38,14 +50,13 @@
                         {#if user}
                             <span>{user.display_name} | </span>
                         {/if}
-                        <button
-                            onclick={handleLogout}
-                            class="text-base text-slate-400 hover:text-white">Sign Out</button
+                        <button onclick={handleLogout} class="text-slate-400 hover:text-white"
+                            >Sign Out</button
                         >
                     {:else}
-                        <a href={resolve('/login')} class="text-slate-400 hover:text-white">
-                            Sign In
-                        </a>
+                        <a href={resolve('/login')} class="text-slate-400 hover:text-white"
+                            >Sign In</a
+                        >
                     {/if}
                 </div>
             </nav>

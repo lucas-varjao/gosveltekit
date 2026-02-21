@@ -84,8 +84,8 @@
                 // Use the auth store to login
                 await authStore.login(username, password)
 
-                // Redirect to home page after successful login
-                goto(resolve('/logged'))
+                // Redirect to profile page after successful login
+                goto(resolve('/profile'))
             } catch (error) {
                 console.error('Login error:', error)
                 authError =

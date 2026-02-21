@@ -55,6 +55,20 @@ type PasswordResetRequest struct {
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
 
+// UpdateProfileRequest represents fields that can be changed by the user.
+type UpdateProfileRequest struct {
+	DisplayName *string `json:"display_name"`
+	FirstName   *string `json:"first_name"`
+	LastName    *string `json:"last_name"`
+}
+
+// ChangePasswordRequest represents the request body for changing password.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password"     binding:"required"`
+	ConfirmPassword string `json:"confirm_password" binding:"required"`
+}
+
 // Login handles user authentication with input validation
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
@@ -216,4 +230,176 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user.(*auth.UserData))
+}
+
+// GetAccountProfile returns profile data for the current authenticated user.
+func (h *AuthHandler) GetAccountProfile(c *gin.Context) {
+	userID, ok := getContextString(c, "userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
+		return
+	}
+
+	profile, err := h.authService.GetProfile(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao obter perfil"})
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
+// UpdateAccountProfile updates the authenticated user's profile.
+func (h *AuthHandler) UpdateAccountProfile(c *gin.Context) {
+	userID, ok := getContextString(c, "userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.DisplayName == nil && req.FirstName == nil && req.LastName == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nenhum campo para atualizar"})
+		return
+	}
+
+	profile, err := h.authService.UpdateProfile(userID, service.UpdateProfileInput{
+		DisplayName: req.DisplayName,
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, validation.ErrDisplayNameInvalid), errors.Is(err, validation.ErrDisplayNameTooLong):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao atualizar perfil"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
+// ChangeAccountPassword changes the authenticated user's password.
+func (h *AuthHandler) ChangeAccountPassword(c *gin.Context) {
+	userID, ok := getContextString(c, "userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.authService.ChangePassword(userID, service.ChangePasswordInput{
+		CurrentPassword: req.CurrentPassword,
+		NewPassword:     req.NewPassword,
+		ConfirmPassword: req.ConfirmPassword,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrWrongPassword):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		case errors.Is(err, validation.ErrPasswordTooShort),
+			errors.Is(err, validation.ErrPasswordNoUppercase),
+			errors.Is(err, validation.ErrPasswordNoLowercase),
+			errors.Is(err, validation.ErrPasswordNoNumber),
+			errors.Is(err, validation.ErrPasswordNoSpecial),
+			errors.Is(err, validation.ErrPasswordCommonWord),
+			errors.Is(err, validation.ErrPasswordContainsUser),
+			err.Error() == "as senhas não coincidem":
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao alterar senha"})
+		}
+		return
+	}
+
+	// Current session is invalidated during password change.
+	middleware.ClearSessionCookie(c, h.cookieSecure)
+
+	c.JSON(http.StatusOK, gin.H{"message": "senha alterada com sucesso"})
+}
+
+// ListAccountSessions returns all sessions from the authenticated user.
+func (h *AuthHandler) ListAccountSessions(c *gin.Context) {
+	userID, ok := getContextString(c, "userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
+		return
+	}
+
+	currentSessionID, ok := getContextString(c, "sessionID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
+		return
+	}
+
+	sessions, err := h.authService.ListSessions(userID, currentSessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao listar sessões"})
+		return
+	}
+
+	c.JSON(http.StatusOK, sessions)
+}
+
+// RevokeAccountSession removes one session from the authenticated user's account.
+func (h *AuthHandler) RevokeAccountSession(c *gin.Context) {
+	userID, ok := getContextString(c, "userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
+		return
+	}
+
+	currentSessionID, ok := getContextString(c, "sessionID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
+		return
+	}
+
+	sessionID := c.Param("session_id")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "session_id é obrigatório"})
+		return
+	}
+
+	if err := h.authService.RevokeSession(userID, sessionID, currentSessionID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrAccessDenied):
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "falha ao revogar sessão"})
+		}
+		return
+	}
+
+	if sessionID == currentSessionID {
+		middleware.ClearSessionCookie(c, h.cookieSecure)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "sessão revogada com sucesso"})
+}
+
+func getContextString(c *gin.Context, key string) (string, bool) {
+	value, exists := c.Get(key)
+	if !exists {
+		return "", false
+	}
+
+	asString, ok := value.(string)
+	if !ok {
+		return "", false
+	}
+
+	return asString, true
 }
