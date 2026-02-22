@@ -3,6 +3,7 @@
     import { goto } from '$app/navigation'
     import { resolve } from '$app/paths'
     import { accountApi, type AccountSession } from '$lib/api/account'
+    import PageHeader from '$lib/components/layout/page-header.svelte'
     import { Alert, AlertDescription } from '$lib/components/ui/alert'
     import { buttonVariants } from '$lib/components/ui/button'
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
@@ -56,9 +57,11 @@
     })
 </script>
 
-<section class="mx-auto max-w-4xl py-6">
-    <h1 class="text-3xl font-bold text-white">Sessions</h1>
-    <p class="mt-2 text-slate-400">Review active sessions and revoke access when needed.</p>
+<section class="page-shell">
+    <PageHeader
+        title="Sessions"
+        description="Review active sessions and revoke access when needed."
+    />
 
     {#if errorMessage}
         <Alert variant="destructive" class="mt-6 border-red-500/60 bg-red-950/50 text-red-200">
@@ -67,17 +70,17 @@
     {/if}
 
     {#if isLoading}
-        <Card class="mt-8 border-slate-800 bg-slate-900">
+        <Card class="surface-card mt-8">
             <CardContent class="text-slate-300">Loading sessions...</CardContent>
         </Card>
     {:else if sessions.length === 0}
-        <Card class="mt-8 border-slate-800 bg-slate-900">
+        <Card class="surface-card mt-8">
             <CardContent class="text-slate-300">No active sessions found.</CardContent>
         </Card>
     {:else}
         <div class="mt-8 space-y-4">
             {#each sessions as session (session.id)}
-                <Card class="border-slate-800 bg-slate-900">
+                <Card class="surface-card">
                     <CardHeader class="flex-row items-start justify-between gap-3">
                         <div>
                             <CardTitle class="text-lg">

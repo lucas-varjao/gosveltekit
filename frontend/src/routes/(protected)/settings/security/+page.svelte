@@ -4,6 +4,7 @@
     import PasswordField from '$lib/components/auth/password-field.svelte'
     import { accountApi } from '$lib/api/account'
     import { authStore } from '$lib/stores/auth'
+    import PageHeader from '$lib/components/layout/page-header.svelte'
     import { Alert, AlertDescription } from '$lib/components/ui/alert'
     import { buttonVariants } from '$lib/components/ui/button'
     import { Card, CardContent } from '$lib/components/ui/card'
@@ -49,11 +50,10 @@
     }
 </script>
 
-<section class="mx-auto max-w-2xl py-6">
-    <h1 class="text-3xl font-bold text-white">Security</h1>
-    <p class="mt-2 text-slate-400">Change your password.</p>
+<section class="page-shell">
+    <PageHeader title="Security" description="Change your password and rotate active sessions." />
 
-    <Card class="mt-8 border-slate-800 bg-slate-900">
+    <Card class="surface-card mt-8">
         <CardContent>
             <form onsubmit={handleSubmit} class="flex flex-col gap-4">
                 <PasswordField

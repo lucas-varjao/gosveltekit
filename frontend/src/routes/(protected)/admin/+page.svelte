@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { apiRequest } from '$lib/api/client'
+    import PageHeader from '$lib/components/layout/page-header.svelte'
     import { Alert, AlertDescription } from '$lib/components/ui/alert'
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
 
@@ -33,12 +34,11 @@
     })
 </script>
 
-<section class="mx-auto max-w-3xl py-6">
-    <h1 class="text-3xl font-bold text-white">Admin</h1>
-    <p class="mt-2 text-slate-400">Administrative area.</p>
+<section class="page-shell">
+    <PageHeader title="Admin" description="Administrative area and privileged backend views." />
 
     {#if isLoading}
-        <Card class="mt-8 border-slate-800 bg-slate-900">
+        <Card class="surface-card mt-8">
             <CardContent class="text-slate-300">Loading admin dashboard...</CardContent>
         </Card>
     {:else if errorMessage}
@@ -46,7 +46,7 @@
             <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
     {:else if data}
-        <Card class="mt-8 border-slate-800 bg-slate-900">
+        <Card class="surface-card mt-8">
             <CardHeader>
                 <CardTitle>Dashboard</CardTitle>
             </CardHeader>

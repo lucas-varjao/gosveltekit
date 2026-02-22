@@ -118,8 +118,8 @@
     }
 </script>
 
-<section class="flex min-h-[calc(100vh-6rem)] items-center justify-center px-4 py-12">
-    <Card class="w-full max-w-md border-slate-800 bg-slate-900 shadow-lg">
+<section class="page-shell flex min-h-[calc(100vh-6rem)] items-center justify-center">
+    <Card class="surface-card w-full max-w-md shadow-lg">
         <CardHeader class="gap-3 text-center">
             <CardTitle class="text-3xl">Reset Your Password</CardTitle>
         </CardHeader>

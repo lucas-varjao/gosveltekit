@@ -2,7 +2,8 @@
 
 <script lang="ts">
     import '../app.css'
-    import { LoaderCircle, LogIn, LogOut } from '@lucide/svelte'
+    import { LoaderCircle, LogIn, LogOut, ShieldCheck } from '@lucide/svelte'
+    import { page } from '$app/state'
     import { authStore } from '$lib/stores/auth'
     import { buttonVariants } from '$lib/components/ui/button'
     import { goto } from '$app/navigation'
@@ -14,6 +15,20 @@
     let isAuthenticated = $derived($authStore.isAuthenticated)
     let isLoading = $derived($authStore.isLoading)
     let user = $derived($authStore.user)
+    let pathname = $derived(page.url.pathname)
+
+    type AppPath = Parameters<typeof resolve>[0]
+
+    const navLinks: Array<{ path: AppPath; label: string }> = [
+        { path: '/', label: 'Home' },
+        { path: '/status', label: 'Status' }
+    ]
+
+    const protectedNavLinks: Array<{ path: AppPath; label: string }> = [
+        { path: '/profile', label: 'Profile' },
+        { path: '/settings', label: 'Settings' },
+        { path: '/admin', label: 'Admin' }
+    ]
 
     // Function to handle logout
     async function handleLogout() {
@@ -27,19 +42,42 @@
     }
 </script>
 
-<div class="flex min-h-screen flex-col bg-slate-950 text-slate-100">
-    <header class="border-b border-slate-800">
-        <div class="container mx-auto px-4 py-4">
+<div class="flex min-h-screen flex-col text-slate-100">
+    <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/75 backdrop-blur-xl">
+        <div class="mx-auto w-full max-w-6xl px-4 py-4">
             <nav class="flex items-center justify-between">
                 <div class="flex items-center gap-6">
-                    <div class="text-xl font-bold"><a href={resolve('/')}>GoSvelteKit</a></div>
-                    <div class="hidden items-center gap-4 text-sm text-slate-400 md:flex">
-                        <a href={resolve('/')} class="hover:text-white">Home</a>
-                        <a href={resolve('/status')} class="hover:text-white">Status</a>
+                    <a href={resolve('/')} class="flex items-center gap-2 text-xl font-bold">
+                        <ShieldCheck class="size-5 text-blue-300" />
+                        <span class="brand-gradient">GoSvelteKit</span>
+                    </a>
+
+                    <div class="hidden items-center gap-2 md:flex">
+                        {#each navLinks as nav (nav.path)}
+                            <a
+                                href={resolve(nav.path)}
+                                class={cn(
+                                    'top-nav-link',
+                                    pathname === resolve(nav.path) && 'top-nav-link-active'
+                                )}
+                            >
+                                {nav.label}
+                            </a>
+                        {/each}
+
                         {#if isAuthenticated}
-                            <a href={resolve('/profile')} class="hover:text-white">Profile</a>
-                            <a href={resolve('/settings')} class="hover:text-white">Settings</a>
-                            <a href={resolve('/admin')} class="hover:text-white">Admin</a>
+                            {#each protectedNavLinks as nav (nav.path)}
+                                <a
+                                    href={resolve(nav.path)}
+                                    class={cn(
+                                        'top-nav-link',
+                                        pathname.startsWith(resolve(nav.path)) &&
+                                            'top-nav-link-active'
+                                    )}
+                                >
+                                    {nav.label}
+                                </a>
+                            {/each}
                         {/if}
                     </div>
                 </div>
@@ -72,14 +110,13 @@
         </div>
     </header>
 
-    <main class="container mx-auto flex-grow px-4 py-8">
+    <main class="flex-grow">
         {@render children()}
     </main>
 
-    <footer class="flex h-24 items-center justify-center border-t border-slate-800">
-        <div class="container mx-auto px-4 py-6 text-center text-sm text-slate-400">
-            <span
-                >&copy; {new Date().getFullYear()} Lucas Varjão - Desenvolvido com SvelteKit e Go</span
+    <footer class="flex h-24 items-center justify-center border-t border-slate-800/80">
+        <div class="mx-auto w-full max-w-6xl px-4 py-6 text-center text-sm text-slate-400">
+            <span>&copy; {new Date().getFullYear()} Lucas Varjão - Built with SvelteKit and Go</span
             >
         </div>
     </footer>

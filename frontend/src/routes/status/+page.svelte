@@ -2,6 +2,7 @@
     import { onMount } from 'svelte'
     import { RefreshCw } from '@lucide/svelte'
     import { apiRequest } from '$lib/api/client'
+    import PageHeader from '$lib/components/layout/page-header.svelte'
     import { buttonVariants } from '$lib/components/ui/button'
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
     import { cn } from '$lib/utils'
@@ -36,11 +37,13 @@
     })
 </script>
 
-<section class="mx-auto max-w-2xl py-6">
-    <h1 class="text-3xl font-bold text-white">System Status</h1>
-    <p class="mt-2 text-slate-400">Live status from the backend health endpoint.</p>
+<section class="page-shell">
+    <PageHeader
+        title="System Status"
+        description="Live status retrieved from the backend health endpoint."
+    />
 
-    <Card class="mt-8 border-slate-800 bg-slate-900">
+    <Card class="surface-card mt-8">
         <CardHeader>
             <CardTitle class="text-sm font-medium text-slate-400">Backend health</CardTitle>
         </CardHeader>

@@ -20,3 +20,9 @@ bun run dev
 ```bash
 bun run check
 ```
+
+## Base visual
+
+- Tokens e atmosfera global em `src/app.css` (tema dark-only)
+- Layout/padrões de página em `src/lib/components/layout/`
+- Componentes de UI em `src/lib/components/ui/` (shadcn-svelte)

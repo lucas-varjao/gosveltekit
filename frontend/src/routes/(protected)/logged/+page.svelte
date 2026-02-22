@@ -4,6 +4,7 @@
     import { onMount } from 'svelte'
     import { LoaderCircle, LogOut } from '@lucide/svelte'
     import { apiRequest } from '$lib/api/client'
+    import PageHeader from '$lib/components/layout/page-header.svelte'
     import { buttonVariants } from '$lib/components/ui/button'
     import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
     import { authStore } from '$lib/stores/auth'
@@ -51,19 +52,23 @@
     }
 </script>
 
-<section class="py-12">
-    <div class="mx-auto mb-16 max-w-3xl text-center">
-        <h1 class="mb-6 inline-block bg-clip-text text-4xl font-bold">Authentication Test Page</h1>
+<section class="page-shell">
+    <div class="mx-auto mb-10 max-w-3xl text-center">
+        <PageHeader
+            align="center"
+            title="Authentication Test Page"
+            description="Inspect active auth state and backend protected endpoint response."
+        />
 
         {#if isLoading}
-            <Card class="mx-auto mb-8 max-w-md border-slate-800 bg-slate-900">
+            <Card class="surface-card mx-auto mb-8 max-w-md">
                 <CardContent class="flex h-20 items-center justify-center gap-3">
                     <LoaderCircle class="size-6 animate-spin text-slate-300" />
                     <p class="text-slate-300">Loading authentication data...</p>
                 </CardContent>
             </Card>
         {:else if user}
-            <Card class="mx-auto mb-8 max-w-md border-slate-800 bg-slate-900 text-left">
+            <Card class="surface-card mx-auto mb-8 max-w-md text-left">
                 <CardHeader>
                     <CardTitle class="text-center text-2xl">User Information</CardTitle>
                 </CardHeader>
