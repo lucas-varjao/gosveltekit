@@ -10,27 +10,28 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 
 ### Backend (Golang)
 
--   **Autenticação plugável** com adapters (estilo Lucia Auth)
--   Sessões armazenadas no banco de dados
--   Banco de dados PostgreSQL com GORM (runtime)
--   Estrutura modular e escalável
--   Middleware de autenticação
--   API RESTful com Gin
+- **Autenticação plugável** com adapters (estilo Lucia Auth)
+- Sessões armazenadas no banco de dados
+- Banco de dados PostgreSQL com GORM (runtime)
+- Estrutura modular e escalável
+- Middleware de autenticação
+- API RESTful com Gin
 
 ### Frontend (SvelteKit)
 
--   Páginas de autenticação prontas (login, registro, recuperação de senha)
--   Gerenciamento de estado com Svelte 5 runes (`$state`, `$derived`)
--   Layout responsivo com TailwindCSS
--   Componentes UI seguindo o padrão **shadcn-svelte**
--   Ícones SVG com **@lucide/svelte** (Svelte 5)
--   Sessão baseada em cookie HttpOnly no navegador
+- Páginas de autenticação prontas (login, registro, recuperação de senha)
+- Gerenciamento de estado com Svelte 5 runes (`$state`, `$derived`)
+- Layout responsivo com TailwindCSS
+- Componentes UI seguindo o padrão **shadcn-svelte**
+- Exemplo de Data Table server-side em `/admin` com **TanStack Table**
+- Ícones SVG com **@lucide/svelte** (Svelte 5)
+- Sessão baseada em cookie HttpOnly no navegador
 
 ## 🛠️ Pré-requisitos
 
--   Go 1.26+
--   Bun (ou Node.js 18+)
--   Podman ou Docker (opcional)
+- Go 1.26+
+- Bun (ou Node.js 18+)
+- Podman ou Docker (opcional)
 
 ## 🔧 Instalação e Uso
 
@@ -40,6 +41,22 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 git clone https://github.com/lucas-varjao/gosveltekit.git meu-novo-projeto
 cd meu-novo-projeto
 ```
+
+### Atalhos com Makefile
+
+```bash
+make help
+make test
+make images
+```
+
+Alvos úteis:
+
+- `make dev-backend`
+- `make dev-frontend`
+- `make build`
+- `make test`
+- `make images`
 
 ### Build versionado de imagens
 
@@ -51,6 +68,8 @@ Por padrão o script usa `podman`, lê a versão de `VERSION` e gera as tags:
 
 - `gosveltekit-backend:<versao>` e `gosveltekit-backend:latest`
 - `gosveltekit-frontend:<versao>` e `gosveltekit-frontend:latest`
+
+As imagens de runtime usam o fuso horário `America/Sao_Paulo`.
 
 Para usar Docker em vez de Podman:
 
@@ -86,6 +105,13 @@ bun run dev
 
 Em desenvolvimento e build de produção, o frontend lê a mesma versão central de `../VERSION` e a exibe no rodapé.
 
+Você também pode usar os alvos do `Makefile`:
+
+```bash
+make dev-backend
+make dev-frontend
+```
+
 ### Execução das imagens
 
 #### Backend
@@ -103,6 +129,33 @@ Com Docker, ajuste o host do banco conforme o seu ambiente.
 ```bash
 podman run --rm -p 3000:80 gosveltekit-frontend:0.1.0
 ```
+
+## ☸️ Kubernetes
+
+O projeto inclui um manifesto único em `k8s/gosveltekit.yaml`.
+
+Ele contém:
+
+- `Namespace`
+- `ConfigMap`
+- `Secret`
+- `Deployment` e `Service` do backend
+- `Deployment` e `Service` do frontend
+- `Ingress`
+
+Antes de aplicar no cluster, ajuste:
+
+- as imagens `ghcr.io/your-org/gosveltekit-backend:0.1.0` e `ghcr.io/your-org/gosveltekit-frontend:0.1.0`
+- o `DATABASE_DSN` e credenciais SMTP no `Secret`
+- o host do ingress (`gosveltekit.local`)
+
+Aplicação:
+
+```bash
+kubectl apply -f k8s/gosveltekit.yaml
+```
+
+Para o modelo de ingress do manifesto funcionar sem origem cruzada, gere a imagem do frontend com `VITE_API_URL=''` ou com a URL pública real da API.
 
 ## 📁 Estrutura do Projeto
 
@@ -126,13 +179,68 @@ gosveltekit/
 └── frontend/
     └── src/
         ├── lib/
-        │   ├── api/          # Cliente HTTP e auth
+        │   ├── api/          # Cliente HTTP, auth e listagens administrativas
         │   └── stores/       # Estado (auth store)
         └── routes/
             ├── login/
             ├── register/
             └── (protected)/  # Rotas autenticadas
 ```
+
+## 📊 Data Tables
+
+O projeto agora inclui uma referência oficial de tabela administrativa em `frontend/src/routes/(protected)/admin/+page.svelte`.
+
+Direção da stack:
+
+- frontend com **Svelte 5** + **shadcn-svelte**
+- comportamento de tabela com **TanStack Table**
+- paginação, filtro e sorting controlados pelo backend Go
+- contrato HTTP explícito para listagens server-side
+
+### Endpoint de referência
+
+```http
+GET /api/admin/users?page=1&page_size=10&search=admin&sort=created_at&order=desc
+```
+
+### Resposta de referência
+
+```json
+{
+    "items": [
+        {
+            "id": "1",
+            "identifier": "admin",
+            "email": "admin@example.com",
+            "display_name": "Administrator",
+            "role": "admin",
+            "active": true,
+            "last_login": "2026-03-14T10:00:00Z",
+            "created_at": "2026-01-10T08:00:00Z"
+        }
+    ],
+    "page": 1,
+    "page_size": 10,
+    "total_items": 1,
+    "total_pages": 1,
+    "sort": {
+        "field": "created_at",
+        "direction": "desc"
+    },
+    "search": "admin"
+}
+```
+
+### Convenção recomendada
+
+Para novas listagens administrativas:
+
+- crie endpoints paginados no backend Go em vez de retornar arrays completos
+- mantenha filtros e ordenação como query params simples
+- use `snake_case` no contrato JSON
+- trate `TanStack Table` como camada de comportamento, e `shadcn-svelte` como base visual
+- use a tela `/admin` como referência para paginação, busca e ordenação server-side
 
 ## 🔐 Autenticação
 
@@ -171,8 +279,8 @@ type SessionAdapter interface {
 
 ### Canais de autenticação suportados
 
--   Web: cookie `session_id` (HttpOnly)
--   API clients/mobile/CLI: `Authorization: Bearer {session_id}` ou `X-Session-ID`
+- Web: cookie `session_id` (HttpOnly)
+- API clients/mobile/CLI: `Authorization: Bearer {session_id}` ou `X-Session-ID`
 
 ### Exemplos cURL (CLI)
 

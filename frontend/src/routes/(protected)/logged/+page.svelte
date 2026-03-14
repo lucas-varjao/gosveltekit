@@ -31,7 +31,7 @@
         }
     }
 
-    let intervalId: number
+    let intervalId: ReturnType<typeof setInterval> | undefined
 
     onMount(() => {
         fetchData()

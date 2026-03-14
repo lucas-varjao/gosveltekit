@@ -1,4 +1,5 @@
 <!-- frontend/src/routes/+layout.svelte -->
+<!-- global __APP_VERSION__ -->
 
 <script lang="ts">
     import '../app.css'
@@ -119,8 +120,9 @@
         <div
             class="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-1 px-4 py-6 text-center text-sm text-slate-400"
         >
-            <span>&copy; {new Date().getFullYear()} Lucas Varjão - Built with SvelteKit and Go</span>
-            <span class="text-xs uppercase tracking-[0.2em] text-slate-500">
+            <span>&copy; {new Date().getFullYear()} Lucas Varjão - Built with SvelteKit and Go</span
+            >
+            <span class="text-xs tracking-[0.2em] text-slate-500 uppercase">
                 Version {appVersion}
             </span>
         </div>

@@ -236,3 +236,53 @@ func TestAuthService_RequestPasswordReset(t *testing.T) {
 	assert.Equal(t, user.DisplayName, sentEmails[0].DisplayName)
 	assert.NotEmpty(t, sentEmails[0].Token)
 }
+
+func TestAuthService_ListAdminUsers(t *testing.T) {
+	authService, _, _, _, _, db := setupTest(t)
+
+	users := []*models.User{
+		{
+			Username:     "zoe",
+			Email:        "zoe@example.com",
+			DisplayName:  "Zoe Doe",
+			PasswordHash: "hash",
+			Active:       true,
+			Role:         "user",
+		},
+		{
+			Username:     "anna",
+			Email:        "anna@example.com",
+			DisplayName:  "Anna Doe",
+			PasswordHash: "hash",
+			Active:       false,
+			Role:         "manager",
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	result, err := authService.ListAdminUsers(ListAdminUsersInput{
+		Page:     1,
+		PageSize: 1,
+		Sort:     "email",
+		Order:    "asc",
+	})
+	require.NoError(t, err)
+	require.Len(t, result.Items, 1)
+	assert.Equal(t, int64(2), result.TotalItems)
+	assert.Equal(t, "anna@example.com", result.Items[0].Email)
+	assert.Equal(t, 2, result.TotalPages)
+}
+
+func TestAuthService_ListAdminUsers_InvalidQuery(t *testing.T) {
+	authService, _, _, _, _, _ := setupTest(t)
+
+	result, err := authService.ListAdminUsers(ListAdminUsersInput{
+		Page:     1,
+		PageSize: 10,
+		Sort:     "drop_table",
+		Order:    "asc",
+	})
+
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, ErrInvalidAdminUsersQuery)
+}

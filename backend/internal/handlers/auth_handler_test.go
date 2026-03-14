@@ -32,6 +32,7 @@ type MockAuthService struct {
 	ChangePasswordFunc       func(userID string, input service.ChangePasswordInput) error
 	ListSessionsFunc         func(userID, currentSessionID string) ([]service.SessionInfo, error)
 	RevokeSessionFunc        func(userID, sessionID, currentSessionID string) error
+	ListAdminUsersFunc       func(input service.ListAdminUsersInput) (*service.PaginatedResult[service.AdminUserRow], error)
 }
 
 func (m *MockAuthService) Login(username, password, ip, userAgent string) (*service.LoginResponse, error) {
@@ -119,6 +120,15 @@ func (m *MockAuthService) RevokeSession(userID, sessionID, currentSessionID stri
 		return nil
 	}
 	return m.RevokeSessionFunc(userID, sessionID, currentSessionID)
+}
+
+func (m *MockAuthService) ListAdminUsers(
+	input service.ListAdminUsersInput,
+) (*service.PaginatedResult[service.AdminUserRow], error) {
+	if m.ListAdminUsersFunc == nil {
+		return nil, nil
+	}
+	return m.ListAdminUsersFunc(input)
 }
 
 func setupTestRouter() (*gin.Context, *httptest.ResponseRecorder) {

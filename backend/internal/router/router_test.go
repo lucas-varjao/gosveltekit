@@ -113,6 +113,21 @@ func (m *MockAuthService) RevokeSession(userID, sessionID, currentSessionID stri
 	return nil
 }
 
+func (m *MockAuthService) ListAdminUsers(
+	input service.ListAdminUsersInput,
+) (*service.PaginatedResult[service.AdminUserRow], error) {
+	return &service.PaginatedResult[service.AdminUserRow]{
+		Items:      []service.AdminUserRow{},
+		Page:       input.Page,
+		PageSize:   input.PageSize,
+		TotalPages: 1,
+		Sort: service.AdminUsersSort{
+			Field:     "created_at",
+			Direction: "desc",
+		},
+	}, nil
+}
+
 func NewMockAuthHandler() *handlers.AuthHandler {
 	mockAuthService := &MockAuthService{}
 	return handlers.NewAuthHandler(mockAuthService)

@@ -104,6 +104,7 @@ func SetupRouter(
 			"message": "Admin Dashboard",
 		})
 	})
+	admin.GET("/users", authHandler.ListAdminUsers)
 
 	return r
 }

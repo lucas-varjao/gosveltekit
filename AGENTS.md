@@ -47,6 +47,9 @@ internal/auth/
 - **Icons**: @lucide/svelte (Svelte 5)
 - **Mode**: Dark mode only
 - Always use Svelte 5 with the new runes API (`$state`, `$derived`, `$props`)
+- Data tables should use `shadcn-svelte` + `TanStack Table`
+- Prefer server-side tables: pagination, filter, and sorting must come from the Go backend
+- The reference implementation for this stack lives in `frontend/src/routes/(protected)/admin/+page.svelte`
 - A versão exibida no footer deve vir da versão central do projeto
 
 ### Auth Store
@@ -80,13 +83,17 @@ interface User {
 
 - Monorepo with `backend/` and `frontend/` directories
 - Dev requires running both servers: `cd backend && go run main.go` and `cd frontend && bun run dev`
+- Existe um `Makefile` na raiz para tarefas comuns (`make help`, `make test`, `make images`, etc.)
 - Follow Conventional Commits for commit messages
 - Ao alterar a versão do projeto, atualizar apenas o arquivo raiz `VERSION`
 
 ## Deployment
 
 - Docker containers for deployment
+- Runtime final previsto: Kubernetes
 - Environment variables for configuration
 - Imagens devem ser versionadas a partir de `VERSION`
 - O script padrão para build das imagens é `./scripts/build-images.sh`
 - O script usa `podman` por padrão e aceita `CONTAINER_CLI=docker`
+- Existe um manifesto único em `k8s/gosveltekit.yaml`
+- As imagens de runtime usam `TZ=America/Sao_Paulo`

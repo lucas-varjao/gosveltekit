@@ -475,3 +475,120 @@ func TestAdminDashboardAccess(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
+
+func TestAdminUsersListing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r, db, _, _ := setupIntegrationTest(t)
+
+	adminHash, err := bcrypt.GenerateFromPassword([]byte("Admin123!@#"), bcrypt.DefaultCost)
+	require.NoError(t, err)
+
+	adminUser := &models.User{
+		Username:     "adminlist",
+		Email:        "adminlist@example.com",
+		PasswordHash: string(adminHash),
+		DisplayName:  "Admin List",
+		Active:       true,
+		Role:         "admin",
+	}
+	require.NoError(t, db.Create(adminUser).Error)
+
+	users := []*models.User{
+		{
+			Username:     "alice",
+			Email:        "alice@example.com",
+			DisplayName:  "Alice Doe",
+			PasswordHash: string(adminHash),
+			Active:       true,
+			Role:         "user",
+		},
+		{
+			Username:     "bob",
+			Email:        "bob@example.com",
+			DisplayName:  "Bob Doe",
+			PasswordHash: string(adminHash),
+			Active:       false,
+			Role:         "manager",
+		},
+		{
+			Username:     "charlie",
+			Email:        "charlie@example.com",
+			DisplayName:  "Charlie Doe",
+			PasswordHash: string(adminHash),
+			Active:       true,
+			Role:         "user",
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	adminLogin := map[string]any{
+		"username": "adminlist",
+		"password": "Admin123!@#",
+	}
+	w := httptest.NewRecorder()
+	jsonData, _ := json.Marshal(adminLogin)
+	req, _ := http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.40:1234"
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var authResponse map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &authResponse))
+	adminSession := authResponse["session_id"].(string)
+
+	regularLogin := map[string]any{
+		"username": "alice",
+		"password": "Admin123!@#",
+	}
+	w = httptest.NewRecorder()
+	jsonData, _ = json.Marshal(regularLogin)
+	req, _ = http.NewRequest("POST", "/auth/login", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.41:1234"
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &authResponse))
+	regularSession := authResponse["session_id"].(string)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/admin/users?page=1&page_size=2&sort=email&order=asc", nil)
+	req.Header.Set("Authorization", "Bearer "+regularSession)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/admin/users?page=1&page_size=2&sort=email&order=asc", nil)
+	req.Header.Set("Authorization", "Bearer "+adminSession)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var pageOne struct {
+		Items      []map[string]any `json:"items"`
+		Page       float64          `json:"page"`
+		PageSize   float64          `json:"page_size"`
+		TotalItems float64          `json:"total_items"`
+		TotalPages float64          `json:"total_pages"`
+		Sort       map[string]any   `json:"sort"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &pageOne))
+	require.Len(t, pageOne.Items, 2)
+	assert.Equal(t, float64(1), pageOne.Page)
+	assert.Equal(t, float64(2), pageOne.PageSize)
+	assert.GreaterOrEqual(t, int(pageOne.TotalItems), 4)
+	assert.Equal(t, "asc", pageOne.Sort["direction"])
+	assert.Equal(t, "adminlist@example.com", pageOne.Items[0]["email"])
+
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/api/admin/users?page=1&page_size=10&search=charlie&sort=display_name&order=desc", nil)
+	req.Header.Set("Authorization", "Bearer "+adminSession)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var searchResponse struct {
+		Items []map[string]any `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &searchResponse))
+	require.Len(t, searchResponse.Items, 1)
+	assert.Equal(t, "charlie", searchResponse.Items[0]["identifier"])
+}

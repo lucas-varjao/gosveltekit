@@ -45,6 +45,7 @@ type AuthServiceInterface interface {
 	ChangePassword(userID string, input ChangePasswordInput) error
 	ListSessions(userID, currentSessionID string) ([]SessionInfo, error)
 	RevokeSession(userID, sessionID, currentSessionID string) error
+	ListAdminUsers(input ListAdminUsersInput) (*PaginatedResult[AdminUserRow], error)
 }
 
 // AuthService handles authentication business logic
