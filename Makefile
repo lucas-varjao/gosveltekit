@@ -14,6 +14,10 @@ K8S_BASE_MANIFEST ?= $(ROOT_DIR)/k8s/$(APP_SLUG)-base.yaml
 K8S_MIGRATE_JOB_MANIFEST ?= $(ROOT_DIR)/k8s/$(APP_SLUG)-migrate.job.yaml
 K8S_MIGRATE_JOB_NAME ?= $(APP_SLUG)-migrate
 K8S_MIGRATE_TIMEOUT ?= 5m
+K8S_APP_MANIFEST ?= $(ROOT_DIR)/k8s/$(APP_SLUG).yaml
+K8S_BACKEND_DEPLOYMENT_NAME ?= $(APP_SLUG)-backend
+K8S_FRONTEND_DEPLOYMENT_NAME ?= $(APP_SLUG)-frontend
+K8S_ROLLOUT_TIMEOUT ?= 5m
 
 INIT_ARGS :=
 ifdef APP_NAME
@@ -38,7 +42,7 @@ endif
 .PHONY: help version init bootstrap install backend-install frontend-install infra-up \
 	infra-down dev-backend dev-frontend build backend-build frontend-build test \
 	backend-test frontend-check lint format images migrate-up migrate-down \
-	migrate-create seed-admin images k8s-migrate-job clean
+	migrate-create seed-admin images k8s-migrate-job k8s-deploy clean
 
 help:
 	@printf "\nTargets disponíveis:\n\n"
@@ -67,6 +71,7 @@ help:
 	@printf "  %-18s %s\n" "seed-admin" "Cria ou atualiza o usuário administrador"
 	@printf "  %-18s %s\n" "images" "Builda imagens versionadas com $(CONTAINER_CLI)"
 	@printf "  %-18s %s\n" "k8s-migrate-job" "Aplica base, recria e aguarda o Job de migração"
+	@printf "  %-18s %s\n" "k8s-deploy" "Executa migração, aplica app e aguarda rollout"
 	@printf "  %-18s %s\n\n" "clean" "Remove artefatos de build locais"
 
 version:
@@ -145,6 +150,15 @@ k8s-migrate-job:
 	$(KUBECTL) delete -f $(K8S_MIGRATE_JOB_MANIFEST) --ignore-not-found
 	$(KUBECTL) create -f $(K8S_MIGRATE_JOB_MANIFEST)
 	$(KUBECTL) wait --for=condition=complete job/$(K8S_MIGRATE_JOB_NAME) -n $(K8S_NAMESPACE) --timeout=$(K8S_MIGRATE_TIMEOUT)
+
+k8s-deploy:
+	$(KUBECTL) apply -f $(K8S_BASE_MANIFEST)
+	$(KUBECTL) delete -f $(K8S_MIGRATE_JOB_MANIFEST) --ignore-not-found
+	$(KUBECTL) create -f $(K8S_MIGRATE_JOB_MANIFEST)
+	$(KUBECTL) wait --for=condition=complete job/$(K8S_MIGRATE_JOB_NAME) -n $(K8S_NAMESPACE) --timeout=$(K8S_MIGRATE_TIMEOUT)
+	$(KUBECTL) apply -f $(K8S_APP_MANIFEST)
+	$(KUBECTL) rollout status deployment/$(K8S_BACKEND_DEPLOYMENT_NAME) -n $(K8S_NAMESPACE) --timeout=$(K8S_ROLLOUT_TIMEOUT)
+	$(KUBECTL) rollout status deployment/$(K8S_FRONTEND_DEPLOYMENT_NAME) -n $(K8S_NAMESPACE) --timeout=$(K8S_ROLLOUT_TIMEOUT)
 
 clean:
 	rm -rf $(BACKEND_DIR)/bin

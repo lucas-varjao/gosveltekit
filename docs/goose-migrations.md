@@ -206,10 +206,7 @@ Fluxo operacional:
 Exemplo prático:
 
 ```bash
-make k8s-migrate-job
-kubectl apply -f k8s/gosveltekit.yaml
-kubectl rollout status deployment/gosveltekit-backend -n gosveltekit
-kubectl rollout status deployment/gosveltekit-frontend -n gosveltekit
+make k8s-deploy
 ```
 
 O target resolve por padrão:
@@ -218,6 +215,12 @@ O target resolve por padrão:
 - `K8S_BASE_MANIFEST` como `k8s/<app-slug>-base.yaml`
 - `K8S_MIGRATE_JOB_MANIFEST` como `k8s/<app-slug>-migrate.job.yaml`
 - `K8S_MIGRATE_JOB_NAME` como `<app-slug>-migrate`
+
+O target `k8s-deploy` também resolve por padrão:
+
+- `K8S_APP_MANIFEST` como `k8s/<app-slug>.yaml`
+- `K8S_BACKEND_DEPLOYMENT_NAME` como `<app-slug>-backend`
+- `K8S_FRONTEND_DEPLOYMENT_NAME` como `<app-slug>-frontend`
 
 Se necessário, você pode sobrescrever esses valores na invocação do `make`.
 
@@ -281,10 +284,7 @@ Exemplo conceitual:
 
 # publicar imagens no registry
 
-make k8s-migrate-job
-kubectl apply -f k8s/gosveltekit.yaml
-kubectl rollout status deployment/gosveltekit-backend -n gosveltekit
-kubectl rollout status deployment/gosveltekit-frontend -n gosveltekit
+make k8s-deploy
 ```
 
 ## Boas práticas de schema change

@@ -143,11 +143,12 @@ Antes de aplicar no cluster, ajuste:
 Sequência recomendada de deploy:
 
 ```bash
-make k8s-migrate-job
-kubectl apply -f k8s/gosveltekit.yaml
+make k8s-deploy
 ```
 
 O target `make k8s-migrate-job` usa por padrão os valores de `project.env`, mas aceita override via variáveis como `KUBECTL`, `K8S_NAMESPACE`, `K8S_MIGRATE_TIMEOUT`, `K8S_BASE_MANIFEST` e `K8S_MIGRATE_JOB_MANIFEST`.
+
+Se você quiser executar rollout completo, `make k8s-deploy` chama `make k8s-migrate-job`, aplica `k8s/<app>.yaml` e aguarda o rollout de backend e frontend. Ele também aceita override de `K8S_APP_MANIFEST`, `K8S_BACKEND_DEPLOYMENT_NAME`, `K8S_FRONTEND_DEPLOYMENT_NAME` e `K8S_ROLLOUT_TIMEOUT`.
 
 Para operar frontend e backend sob o mesmo host no ingress, gere a imagem do frontend com `VITE_API_URL=''`.
 
