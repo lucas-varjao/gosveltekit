@@ -22,7 +22,8 @@
     async function fetchData() {
         try {
             const response = await apiRequest<Data>('/api/protected', {
-                method: 'GET'
+                method: 'GET',
+                requiresAuth: true
             })
 
             data = response

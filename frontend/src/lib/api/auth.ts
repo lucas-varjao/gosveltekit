@@ -87,6 +87,9 @@ export const authApi = {
 
     // Get current user (new endpoint)
     getCurrentUser: async () => {
-        return apiRequest<AuthResponse['user']>('/api/me', { method: 'GET' })
+        return apiRequest<AuthResponse['user']>('/api/me', {
+            method: 'GET',
+            invalidateAuthOnUnauthorized: true
+        })
     }
 }

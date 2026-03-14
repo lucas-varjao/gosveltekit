@@ -70,6 +70,29 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Contains(t, w.Body.String(), "sessão não encontrada")
 	})
 
+	t.Run("Clears Cookie When Session Is Invalid", func(t *testing.T) {
+		authManager, _ := createTestAuthManager(t)
+
+		r := gin.New()
+		r.Use(AuthMiddleware(authManager, AuthMiddlewareOptions{
+			AllowHeaderAuth: true,
+			AllowCookieAuth: true,
+			CookieSecure:    false,
+		}))
+		r.GET("/test", func(c *gin.Context) {
+			c.Status(http.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("Cookie", "session_id=invalid-session-id")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Header().Get("Set-Cookie"), "session_id=")
+		assert.Contains(t, w.Header().Get("Set-Cookie"), "Max-Age=0")
+	})
+
 	t.Run("Valid Session via Header", func(t *testing.T) {
 		authManager, db := createTestAuthManager(t)
 

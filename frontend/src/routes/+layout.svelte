@@ -5,10 +5,12 @@
     import '../app.css'
     import { LoaderCircle, LogIn, LogOut, ShieldCheck } from '@lucide/svelte'
     import { page } from '$app/state'
+    import { afterNavigate, goto } from '$app/navigation'
+    import { browser } from '$app/environment'
+    import { onMount } from 'svelte'
     import { APP_INFO } from '$lib/config'
     import { authStore } from '$lib/stores/auth'
     import { buttonVariants } from '$lib/components/ui/button'
-    import { goto } from '$app/navigation'
     import { resolve } from '$app/paths'
     import { cn } from '$lib/utils'
 
@@ -44,6 +46,40 @@
             console.error('Logout failed:', error)
         }
     }
+
+    function revalidateActiveSession() {
+        if (isAuthenticated) {
+            void authStore.refreshSession()
+        }
+    }
+
+    onMount(() => {
+        void authStore.init()
+
+        const handleWindowFocus = () => {
+            revalidateActiveSession()
+        }
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                revalidateActiveSession()
+            }
+        }
+
+        window.addEventListener('focus', handleWindowFocus)
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        return () => {
+            window.removeEventListener('focus', handleWindowFocus)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+    })
+
+    afterNavigate(() => {
+        if (browser) {
+            revalidateActiveSession()
+        }
+    })
 </script>
 
 <svelte:head>

@@ -7,6 +7,7 @@
 import { writable } from 'svelte/store'
 import { browser } from '$app/environment'
 import { authApi } from '$lib/api/auth'
+import { setUnauthorizedHandler } from '$lib/api/client'
 
 // User interface matching backend response from /api/me
 export interface User {
@@ -25,6 +26,10 @@ interface AuthState {
     error: string | null
 }
 
+interface ValidateSessionOptions {
+    silent?: boolean
+}
+
 const initialState: AuthState = {
     user: null,
     isAuthenticated: false,
@@ -34,46 +39,86 @@ const initialState: AuthState = {
 
 function createAuthStore() {
     const { subscribe, update } = writable<AuthState>(initialState)
+    let validationRequestID = 0
+
+    function cancelPendingValidation() {
+        validationRequestID += 1
+    }
+
+    function setAuthenticated(user: User) {
+        update((state) => ({
+            ...state,
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null
+        }))
+    }
+
+    function setUnauthenticated(error: string | null = null) {
+        update((state) => ({
+            ...state,
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            error
+        }))
+    }
+
+    async function validateSession(options: ValidateSessionOptions = {}) {
+        if (!browser) return false
+
+        const { silent = false } = options
+        const requestID = ++validationRequestID
+
+        if (!silent) {
+            update((state) => ({ ...state, isLoading: true, error: null }))
+        }
+
+        try {
+            const user = await authApi.getCurrentUser()
+
+            if (requestID !== validationRequestID) {
+                return true
+            }
+
+            setAuthenticated(user)
+            return true
+        } catch {
+            if (requestID !== validationRequestID) {
+                return false
+            }
+
+            setUnauthenticated()
+            return false
+        }
+    }
 
     return {
         subscribe,
 
         // Initialize auth state by validating server-side session cookie.
         init: async () => {
-            if (!browser) return
+            return validateSession()
+        },
 
-            update((state) => ({ ...state, isLoading: true }))
+        refreshSession: async () => {
+            return validateSession({ silent: true })
+        },
 
-            try {
-                const user = await authApi.getCurrentUser()
-                update((state) => ({
-                    ...state,
-                    user,
-                    isAuthenticated: true,
-                    isLoading: false
-                }))
-            } catch {
-                update((state) => ({
-                    ...state,
-                    user: null,
-                    isAuthenticated: false,
-                    isLoading: false
-                }))
-            }
+        invalidateSession: () => {
+            cancelPendingValidation()
+            setUnauthenticated()
         },
 
         login: async (username: string, password: string) => {
+            cancelPendingValidation()
             update((state) => ({ ...state, isLoading: true, error: null }))
 
             try {
                 const response = await authApi.login({ username, password })
 
-                update((state) => ({
-                    ...state,
-                    user: response.user,
-                    isAuthenticated: true,
-                    isLoading: false
-                }))
+                setAuthenticated(response.user)
 
                 return response.user
             } catch (error) {
@@ -94,6 +139,7 @@ function createAuthStore() {
             password: string
             display_name: string
         }) => {
+            cancelPendingValidation()
             update((state) => ({ ...state, isLoading: true, error: null }))
 
             try {
@@ -124,17 +170,13 @@ function createAuthStore() {
         },
 
         logout: async () => {
+            cancelPendingValidation()
             update((state) => ({ ...state, isLoading: true }))
 
             try {
                 await authApi.logout()
             } finally {
-                update((state) => ({
-                    ...state,
-                    user: null,
-                    isAuthenticated: false,
-                    isLoading: false
-                }))
+                setUnauthenticated()
             }
         },
 
@@ -145,7 +187,4 @@ function createAuthStore() {
 }
 
 export const authStore = createAuthStore()
-
-if (browser) {
-    authStore.init()
-}
+setUnauthorizedHandler(() => authStore.invalidateSession())

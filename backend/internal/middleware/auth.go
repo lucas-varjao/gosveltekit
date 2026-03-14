@@ -75,6 +75,10 @@ func AuthMiddleware(authManager *auth.AuthManager, options ...AuthMiddlewareOpti
 				message = "usuário inativo"
 			}
 
+			if authOptions.AllowCookieAuth {
+				ClearSessionCookie(c, authOptions.CookieSecure)
+			}
+
 			c.AbortWithStatusJSON(status, gin.H{"error": message})
 			return
 		}

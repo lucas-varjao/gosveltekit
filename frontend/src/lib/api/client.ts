@@ -13,7 +13,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 interface ApiRequestOptions extends RequestInit {
     requiresAuth?: boolean
+    invalidateAuthOnUnauthorized?: boolean
 }
+
+let unauthorizedHandler: (() => void) | null = null
 
 // Error types
 export class ApiError extends Error {
@@ -26,13 +29,18 @@ export class ApiError extends Error {
     }
 }
 
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+    unauthorizedHandler = handler
+}
+
 // API request function with automatic session handling
 export async function apiRequest<T = unknown>(
     endpoint: string,
     options: ApiRequestOptions = {}
 ): Promise<T> {
-    const { requiresAuth = false, ...requestOptions } = options
+    const { requiresAuth = false, invalidateAuthOnUnauthorized, ...requestOptions } = options
     const url = `${API_BASE_URL}${endpoint}`
+    const shouldInvalidateAuthOnUnauthorized = invalidateAuthOnUnauthorized ?? requiresAuth
 
     // Set default headers
     const headers = new Headers(requestOptions.headers)
@@ -47,7 +55,10 @@ export async function apiRequest<T = unknown>(
 
     try {
         const response = await fetch(url, request)
-        return handleResponse(response, requiresAuth)
+        return handleResponse(response, {
+            requiresAuth,
+            invalidateAuthOnUnauthorized: shouldInvalidateAuthOnUnauthorized
+        })
     } catch (error) {
         if (error instanceof ApiError) throw error
         console.error('API request failed:', error)
@@ -56,11 +67,19 @@ export async function apiRequest<T = unknown>(
 }
 
 // Handle API response
-async function handleResponse<T>(response: Response, requiresAuth: boolean): Promise<T> {
+async function handleResponse<T>(
+    response: Response,
+    options: Pick<ApiRequestOptions, 'requiresAuth' | 'invalidateAuthOnUnauthorized'>
+): Promise<T> {
     const data = await response.json().catch(() => ({}))
+    const { requiresAuth = false, invalidateAuthOnUnauthorized = false } = options
 
     if (!response.ok) {
         const message = data.error || data.message || 'Something went wrong'
+
+        if (response.status === 401 && invalidateAuthOnUnauthorized && browser) {
+            unauthorizedHandler?.()
+        }
 
         if (requiresAuth && browser) {
             if (response.status === 401) {
