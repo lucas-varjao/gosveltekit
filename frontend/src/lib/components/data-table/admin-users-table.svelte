@@ -184,20 +184,24 @@
                                 {:else if header.column.getCanSort()}
                                     <button
                                         type="button"
-                                        class="inline-flex items-center gap-2 text-left text-inherit"
+                                        class="group -mx-1 -my-1 inline-flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-1 py-1 text-left text-inherit transition-colors hover:text-white focus-visible:bg-slate-900/80 focus-visible:text-white"
                                         onclick={header.column.getToggleSortingHandler()}
                                     >
-                                        <FlexRender
-                                            content={header.column.columnDef.header}
-                                            context={header.getContext()}
-                                        />
+                                        <span class="truncate">
+                                            <FlexRender
+                                                content={header.column.columnDef.header}
+                                                context={header.getContext()}
+                                            />
+                                        </span>
 
                                         {#if getSortIconState(header.column.id) === 'asc'}
-                                            <ArrowUp class="size-3.5 text-cyan-300" />
+                                            <ArrowUp class="size-3.5 shrink-0 text-cyan-300" />
                                         {:else if getSortIconState(header.column.id) === 'desc'}
-                                            <ArrowDown class="size-3.5 text-cyan-300" />
+                                            <ArrowDown class="size-3.5 shrink-0 text-cyan-300" />
                                         {:else}
-                                            <ArrowUpDown class="size-3.5 text-slate-500" />
+                                            <ArrowUpDown
+                                                class="size-3.5 shrink-0 text-slate-600 transition-colors group-hover:text-slate-300 group-focus-visible:text-slate-300"
+                                            />
                                         {/if}
                                     </button>
                                 {:else}
@@ -213,7 +217,7 @@
             </TableHeader>
 
             <TableBody>
-                {#if isLoading}
+                {#if isLoading && rows.length === 0}
                     <TableRow class="hover:bg-transparent">
                         <TableCell
                             colspan={columns.length}
