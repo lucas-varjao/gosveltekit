@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -245,7 +245,7 @@ func (s *AuthService) RequestPasswordReset(emailAddr string) error {
 		user.Username,
 		displayName,
 	); err != nil {
-		fmt.Printf("Error sending password reset email: %v\n", err)
+		slog.Error("failed to send password reset email", "err", err)
 	}
 
 	return nil

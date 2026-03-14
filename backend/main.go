@@ -2,8 +2,8 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
+	"os"
 
 	"gosveltekit/internal/auth"
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
@@ -44,7 +44,7 @@ func main() {
 	// Create admin user if not exists
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("failed to hash admin password", "err", err)
 	}
 
 	result := db.Where(models.User{Username: "admin"}).FirstOrCreate(&models.User{
@@ -55,9 +55,9 @@ func main() {
 		Role:         "admin",
 	})
 	if result.Error != nil {
-		fmt.Println(result.Error)
+		slog.Error("failed to create or find admin user", "err", result.Error)
 	}
-	fmt.Printf("Admin user ready - rows affected: %d\n", result.RowsAffected)
+	slog.Info("admin user ready", "rows_affected", result.RowsAffected)
 
 	// Initialize adapters
 	userAdapter := gormadapter.NewUserAdapter(db)
@@ -96,8 +96,9 @@ func main() {
 	r := router.SetupRouter(authHandler, authManager, authMiddlewareOptions)
 
 	// Start server
-	log.Println("Starting server on :8080")
+	slog.Info("Starting server on :8080")
 	if err := r.Run(":8080"); err != nil {
-		log.Fatalf("Erro ao iniciar servidor: %v", err)
+		slog.Error("failed to start server", "err", err)
+		os.Exit(1)
 	}
 }

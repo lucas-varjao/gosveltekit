@@ -35,7 +35,7 @@ func NewAuthHandler(authService service.AuthServiceInterface, cookieSecure ...bo
 // LoginRequest represents the login request body
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
-	//nolint:gosec // API contract requires json key "password".
+
 	Passphrase string `json:"password" binding:"required"`
 }
 
@@ -43,7 +43,7 @@ type LoginRequest struct {
 type RegistrationRequest struct {
 	Username string `json:"username" binding:"required"`
 	Email    string `json:"email"    binding:"required"`
-	//nolint:gosec // API contract requires json key "password".
+
 	Passphrase  string `json:"password"     binding:"required"`
 	DisplayName string `json:"display_name" binding:"required"`
 }

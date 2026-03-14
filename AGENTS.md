@@ -9,7 +9,7 @@ GoSvelteKit is a template/base project with a Golang backend and SvelteKit (Svel
 - **Database**: PostgreSQL em runtime (via GORM)
 - **ORM**: GORM for database operations
 - **API Docs**: Swaggo
-- **Logging**: Zap
+- **Logging**: slog (log/slog)
 - **Config**: Viper com padrão env-first e fallback para `backend/configs/app.yml`
 
 ### Config Loading Pattern
