@@ -17,7 +17,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o /out/server \
     .
 
-FROM alpine:latest
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags="-s -w -X 'gosveltekit/internal/version.BuildVersion=${APP_VERSION}'" \
+    -o /out/migrate \
+    ./cmd/migrate
+
+FROM alpine:3.22 AS runtime-base
 
 WORKDIR /app
 
@@ -29,14 +35,24 @@ RUN apk add --no-cache ca-certificates tzdata \
     && addgroup -S app \
     && adduser -S -G app app
 
-COPY --from=builder /out/server ./server
 COPY configs ./configs
 
 ENV TZ=America/Sao_Paulo
 ENV GIN_MODE=release
 
-EXPOSE 8080
-
 USER app
 
+FROM runtime-base AS backend
+
+COPY --from=builder /out/server ./server
+
+EXPOSE 8080
+
 CMD ["./server"]
+
+FROM runtime-base AS migrator
+
+COPY --from=builder /out/migrate ./migrate
+COPY db/migrations ./db/migrations
+
+CMD ["./migrate", "up"]

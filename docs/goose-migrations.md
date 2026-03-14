@@ -182,54 +182,54 @@ Cuidados:
 
 É a opção mais comum quando você quer que o cluster execute a migração.
 
-Para isso, você precisa de uma imagem que contenha o comando de migração, porque a imagem atual do backend só tem `./server`.
+Neste template, essa opção agora está implementada com:
 
-Duas formas comuns:
+- uma imagem `migrator` dedicada, buildada a partir de [`backend/Dockerfile`](/var/home/lvarjao/dev/pessoal/gosveltekit/backend/Dockerfile)
+- um manifesto de `Job` em [`k8s/gosveltekit-migrate.job.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit-migrate.job.yaml)
+- um manifesto base em [`k8s/gosveltekit-base.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit-base.yaml) para `Namespace`, `ConfigMap` e `Secret`
 
-- gerar uma imagem específica de migrator
-- ou incluir também o binário `migrate` na imagem do backend
+A imagem `migrator` contém:
 
-Exemplo de `Job`:
+- o binário `./migrate`
+- o diretório `db/migrations`
+- a mesma pasta `configs` usada pela aplicação
 
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: gosveltekit-migrate
-  namespace: gosveltekit
-spec:
-  backoffLimit: 1
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-        - name: migrate
-          image: ghcr.io/your-org/gosveltekit-migrator:0.1.0
-          imagePullPolicy: IfNotPresent
-          envFrom:
-            - configMapRef:
-                name: gosveltekit-config
-            - secretRef:
-                name: gosveltekit-secrets
-          command: ["./migrate"]
-          args: ["up"]
-```
+O comando default do container já executa `./migrate up`, e o `Job` também declara isso explicitamente.
 
 Fluxo operacional:
 
-1. aplicar ou atualizar `ConfigMap` e `Secret`
-2. criar o `Job` de migração
+1. aplicar [`k8s/gosveltekit-base.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit-base.yaml)
+2. recriar o `Job` de migração
 3. aguardar sucesso do job
-4. aplicar `Deployment` novo do backend
+4. aplicar [`k8s/gosveltekit.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit.yaml)
+
+Exemplo prático:
+
+```bash
+make k8s-migrate-job
+kubectl apply -f k8s/gosveltekit.yaml
+kubectl rollout status deployment/gosveltekit-backend -n gosveltekit
+kubectl rollout status deployment/gosveltekit-frontend -n gosveltekit
+```
+
+O target resolve por padrão:
+
+- `K8S_NAMESPACE` a partir de `project.env`
+- `K8S_BASE_MANIFEST` como `k8s/<app-slug>-base.yaml`
+- `K8S_MIGRATE_JOB_MANIFEST` como `k8s/<app-slug>-migrate.job.yaml`
+- `K8S_MIGRATE_JOB_NAME` como `<app-slug>-migrate`
+
+Se necessário, você pode sobrescrever esses valores na invocação do `make`.
 
 Vantagens:
 
 - a migração roda dentro do cluster
 - usa a mesma rede e os mesmos secrets do app
+- separa claramente recursos base, migração e rollout da aplicação
 
 Cuidados:
 
-- precisa controlar reexecução do job
+- `Job` é recurso imutável em pontos importantes; por isso o fluxo usa `delete` + `create`
 - não é ideal acoplar migração ao startup de cada pod
 - o rollout do app deve depender do sucesso do job
 
@@ -265,11 +265,12 @@ make dev-frontend
 
 ### Produção/Kubernetes
 
-1. buildar e publicar a imagem nova
-2. rodar migração como etapa explícita do pipeline
-3. aplicar o manifesto Kubernetes
+1. buildar e publicar as imagens novas, incluindo `migrator`
+2. aplicar `k8s/gosveltekit-base.yaml`
+3. rodar `k8s/gosveltekit-migrate.job.yaml`
+4. só depois aplicar `k8s/gosveltekit.yaml`
 
-Se você quiser que a migração rode dentro do cluster, o próximo passo natural é adicionar uma imagem `migrator` e um `Job` dedicado.
+Esse já é o fluxo suportado pelo template.
 
 ## Exemplo de pipeline de deploy
 
@@ -280,9 +281,7 @@ Exemplo conceitual:
 
 # publicar imagens no registry
 
-cd backend
-DATABASE_DSN="$PROD_DATABASE_DSN" go run ./cmd/migrate up
-
+make k8s-migrate-job
 kubectl apply -f k8s/gosveltekit.yaml
 kubectl rollout status deployment/gosveltekit-backend -n gosveltekit
 kubectl rollout status deployment/gosveltekit-frontend -n gosveltekit
@@ -300,6 +299,6 @@ kubectl rollout status deployment/gosveltekit-frontend -n gosveltekit
 
 Neste template, Goose é o mecanismo oficial de evolução de banco.
 
-O app não migra schema sozinho; a migração é uma responsabilidade operacional explícita.
+O app não migra schema sozinho; a migração continua sendo uma responsabilidade operacional explícita.
 
-No Kubernetes, o padrão recomendado é rodar `goose up` antes do rollout da aplicação, via pipeline ou via `Job` dedicado.
+No Kubernetes, o template agora suporta isso com uma imagem `migrator` e um `Job` dedicado executado antes do rollout da aplicação.

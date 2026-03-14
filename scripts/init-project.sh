@@ -22,8 +22,10 @@ CURRENT_APP_DOMAIN="${APP_DOMAIN}"
 CURRENT_K8S_NAMESPACE="${K8S_NAMESPACE}"
 CURRENT_BACKEND_IMAGE_NAME="${BACKEND_IMAGE_NAME}"
 CURRENT_FRONTEND_IMAGE_NAME="${FRONTEND_IMAGE_NAME}"
+CURRENT_MIGRATOR_IMAGE_NAME="${MIGRATOR_IMAGE_NAME}"
 CURRENT_BACKEND_IMAGE_REF="${BACKEND_IMAGE_REF}"
 CURRENT_FRONTEND_IMAGE_REF="${FRONTEND_IMAGE_REF}"
+CURRENT_MIGRATOR_IMAGE_REF="${MIGRATOR_IMAGE_REF}"
 CURRENT_APP_SUPPORT_EMAIL="${APP_SUPPORT_EMAIL}"
 CURRENT_APP_RESET_URL="${APP_RESET_URL}"
 
@@ -55,6 +57,15 @@ normalize_registry() {
     local registry="$1"
     registry="${registry%/}"
     printf '%s' "${registry}"
+}
+
+shell_double_quote() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//\$/\\$}"
+    value="${value//\`/\\\`}"
+    printf '"%s"' "${value}"
 }
 
 has_stale_project_refs() {
@@ -110,22 +121,50 @@ replace_in_text_files() {
 
 rewrite_project_env() {
     cat > "${PROJECT_ENV_FILE}" <<EOF
-APP_SLUG=${TARGET_APP_SLUG}
-APP_DISPLAY_NAME=${TARGET_APP_DISPLAY_NAME}
-APP_DESCRIPTION=${CURRENT_APP_DESCRIPTION@Q}
-GO_MODULE=${TARGET_GO_MODULE}
-CONTAINER_REGISTRY=${TARGET_CONTAINER_REGISTRY}
-APP_DOMAIN=${TARGET_APP_DOMAIN}
-K8S_NAMESPACE=${TARGET_K8S_NAMESPACE}
-BACKEND_IMAGE_NAME=${TARGET_BACKEND_IMAGE_NAME}
-FRONTEND_IMAGE_NAME=${TARGET_FRONTEND_IMAGE_NAME}
-BACKEND_IMAGE_REF=${TARGET_BACKEND_IMAGE_REF}
-FRONTEND_IMAGE_REF=${TARGET_FRONTEND_IMAGE_REF}
-APP_SUPPORT_EMAIL=${TARGET_APP_SUPPORT_EMAIL}
-APP_RESET_URL=${TARGET_APP_RESET_URL}
-LOCAL_FRONTEND_URL=${LOCAL_FRONTEND_URL}
-LOCAL_API_URL=${LOCAL_API_URL}
+APP_SLUG=$(shell_double_quote "${TARGET_APP_SLUG}")
+APP_DISPLAY_NAME=$(shell_double_quote "${TARGET_APP_DISPLAY_NAME}")
+APP_DESCRIPTION=$(shell_double_quote "${CURRENT_APP_DESCRIPTION}")
+GO_MODULE=$(shell_double_quote "${TARGET_GO_MODULE}")
+CONTAINER_REGISTRY=$(shell_double_quote "${TARGET_CONTAINER_REGISTRY}")
+APP_DOMAIN=$(shell_double_quote "${TARGET_APP_DOMAIN}")
+K8S_NAMESPACE=$(shell_double_quote "${TARGET_K8S_NAMESPACE}")
+BACKEND_IMAGE_NAME=$(shell_double_quote "${TARGET_BACKEND_IMAGE_NAME}")
+FRONTEND_IMAGE_NAME=$(shell_double_quote "${TARGET_FRONTEND_IMAGE_NAME}")
+MIGRATOR_IMAGE_NAME=$(shell_double_quote "${TARGET_MIGRATOR_IMAGE_NAME}")
+BACKEND_IMAGE_REF=$(shell_double_quote "${TARGET_BACKEND_IMAGE_REF}")
+FRONTEND_IMAGE_REF=$(shell_double_quote "${TARGET_FRONTEND_IMAGE_REF}")
+MIGRATOR_IMAGE_REF=$(shell_double_quote "${TARGET_MIGRATOR_IMAGE_REF}")
+APP_SUPPORT_EMAIL=$(shell_double_quote "${TARGET_APP_SUPPORT_EMAIL}")
+APP_RESET_URL=$(shell_double_quote "${TARGET_APP_RESET_URL}")
+LOCAL_FRONTEND_URL=$(shell_double_quote "${LOCAL_FRONTEND_URL}")
+LOCAL_API_URL=$(shell_double_quote "${LOCAL_API_URL}")
 EOF
+}
+
+rename_if_exists() {
+    local current_path="$1"
+    local target_path="$2"
+
+    if [[ -f "${current_path}" && "${current_path}" != "${target_path}" ]]; then
+        mv "${current_path}" "${target_path}"
+    fi
+}
+
+rewrite_backend_env_files() {
+    local quoted_display_name=""
+    local env_file=""
+
+    quoted_display_name="$(shell_double_quote "${TARGET_APP_DISPLAY_NAME}")"
+
+    for env_file in "${ROOT_DIR}/backend/.env.example" "${ROOT_DIR}/backend/.env"; do
+        if [[ ! -f "${env_file}" ]]; then
+            continue
+        fi
+
+        QUOTED_DISPLAY_NAME="${quoted_display_name}" perl -0pi -e \
+            's/^EMAIL_FROM_NAME=.*$/EMAIL_FROM_NAME=$ENV{QUOTED_DISPLAY_NAME}/m' \
+            "${env_file}"
+    done
 }
 
 while [[ $# -gt 0 ]]; do
@@ -171,12 +210,15 @@ TARGET_K8S_NAMESPACE="${TARGET_K8S_NAMESPACE:-$(prompt_value "Kubernetes namespa
 TARGET_CONTAINER_REGISTRY="$(normalize_registry "${TARGET_CONTAINER_REGISTRY}")"
 TARGET_BACKEND_IMAGE_NAME="${TARGET_APP_SLUG}-backend"
 TARGET_FRONTEND_IMAGE_NAME="${TARGET_APP_SLUG}-frontend"
+TARGET_MIGRATOR_IMAGE_NAME="${TARGET_APP_SLUG}-migrator"
 TARGET_BACKEND_IMAGE_REF="${TARGET_BACKEND_IMAGE_NAME}"
 TARGET_FRONTEND_IMAGE_REF="${TARGET_FRONTEND_IMAGE_NAME}"
+TARGET_MIGRATOR_IMAGE_REF="${TARGET_MIGRATOR_IMAGE_NAME}"
 
 if [[ -n "${TARGET_CONTAINER_REGISTRY}" ]]; then
     TARGET_BACKEND_IMAGE_REF="${TARGET_CONTAINER_REGISTRY}/${TARGET_BACKEND_IMAGE_NAME}"
     TARGET_FRONTEND_IMAGE_REF="${TARGET_CONTAINER_REGISTRY}/${TARGET_FRONTEND_IMAGE_NAME}"
+    TARGET_MIGRATOR_IMAGE_REF="${TARGET_CONTAINER_REGISTRY}/${TARGET_MIGRATOR_IMAGE_NAME}"
 fi
 
 TARGET_APP_SUPPORT_EMAIL="no-reply@${TARGET_APP_DOMAIN}"
@@ -200,8 +242,10 @@ fi
 replace_in_text_files "${CURRENT_GO_MODULE}/" "${TARGET_GO_MODULE}/"
 replace_in_text_files "${CURRENT_BACKEND_IMAGE_REF}" "${TARGET_BACKEND_IMAGE_REF}"
 replace_in_text_files "${CURRENT_FRONTEND_IMAGE_REF}" "${TARGET_FRONTEND_IMAGE_REF}"
+replace_in_text_files "${CURRENT_MIGRATOR_IMAGE_REF}" "${TARGET_MIGRATOR_IMAGE_REF}"
 replace_in_text_files "${CURRENT_BACKEND_IMAGE_NAME}" "${TARGET_BACKEND_IMAGE_NAME}"
 replace_in_text_files "${CURRENT_FRONTEND_IMAGE_NAME}" "${TARGET_FRONTEND_IMAGE_NAME}"
+replace_in_text_files "${CURRENT_MIGRATOR_IMAGE_NAME}" "${TARGET_MIGRATOR_IMAGE_NAME}"
 replace_in_text_files "${CURRENT_APP_RESET_URL}" "${TARGET_APP_RESET_URL}"
 replace_in_text_files "${CURRENT_APP_SUPPORT_EMAIL}" "${TARGET_APP_SUPPORT_EMAIL}"
 replace_in_text_files "${CURRENT_APP_DOMAIN}" "${TARGET_APP_DOMAIN}"
@@ -211,13 +255,11 @@ replace_in_text_files "${CURRENT_CONTAINER_REGISTRY}" "${TARGET_CONTAINER_REGIST
 replace_in_text_files "${CURRENT_APP_SLUG}" "${TARGET_APP_SLUG}"
 
 rewrite_project_env
+rewrite_backend_env_files
 
-CURRENT_MANIFEST="${ROOT_DIR}/k8s/${CURRENT_APP_SLUG}.yaml"
-TARGET_MANIFEST="${ROOT_DIR}/k8s/${TARGET_APP_SLUG}.yaml"
-
-if [[ -f "${CURRENT_MANIFEST}" && "${CURRENT_MANIFEST}" != "${TARGET_MANIFEST}" ]]; then
-    mv "${CURRENT_MANIFEST}" "${TARGET_MANIFEST}"
-fi
+rename_if_exists "${ROOT_DIR}/k8s/${CURRENT_APP_SLUG}.yaml" "${ROOT_DIR}/k8s/${TARGET_APP_SLUG}.yaml"
+rename_if_exists "${ROOT_DIR}/k8s/${CURRENT_APP_SLUG}-base.yaml" "${ROOT_DIR}/k8s/${TARGET_APP_SLUG}-base.yaml"
+rename_if_exists "${ROOT_DIR}/k8s/${CURRENT_APP_SLUG}-migrate.job.yaml" "${ROOT_DIR}/k8s/${TARGET_APP_SLUG}-migrate.job.yaml"
 
 (
     cd "${ROOT_DIR}/backend"

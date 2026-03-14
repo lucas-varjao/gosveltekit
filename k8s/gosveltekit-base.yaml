@@ -1,0 +1,37 @@
+# Apply this manifest first to provision namespace and shared configuration.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: gosveltekit
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: gosveltekit-config
+    namespace: gosveltekit
+data:
+    SERVER_PORT: "8080"
+    AUTH_SESSION_TTL: "720h"
+    AUTH_REFRESH_THRESHOLD: "360h"
+    AUTH_MAX_FAILED_ATTEMPTS: "5"
+    AUTH_LOCKOUT_DURATION: "30m"
+    AUTH_ALLOW_HEADER_AUTH: "true"
+    AUTH_ALLOW_COOKIE_AUTH: "true"
+    AUTH_COOKIE_SECURE: "true"
+    EMAIL_SMTP_HOST: "smtp.example.com"
+    EMAIL_SMTP_PORT: "587"
+    EMAIL_FROM_EMAIL: "no-reply@example.com"
+    EMAIL_FROM_NAME: "GoSvelteKit"
+    EMAIL_RESET_URL: "https://gosveltekit.local/reset-password?token="
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: gosveltekit-secrets
+    namespace: gosveltekit
+type: Opaque
+stringData:
+    DATABASE_DSN: "postgresql://gosvelte:change-me@postgresql.default.svc.cluster.local:5432/gosveltekit?sslmode=disable"
+    EMAIL_SMTP_USERNAME: "change-me"
+    EMAIL_SMTP_PASSWORD: "change-me"

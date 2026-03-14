@@ -15,8 +15,10 @@ fi
 
 BACKEND_IMAGE_NAME="${BACKEND_IMAGE_NAME:-gosveltekit-backend}"
 FRONTEND_IMAGE_NAME="${FRONTEND_IMAGE_NAME:-gosveltekit-frontend}"
+MIGRATOR_IMAGE_NAME="${MIGRATOR_IMAGE_NAME:-gosveltekit-migrator}"
 BACKEND_IMAGE_REF="${BACKEND_IMAGE_REF:-${BACKEND_IMAGE_NAME}}"
 FRONTEND_IMAGE_REF="${FRONTEND_IMAGE_REF:-${FRONTEND_IMAGE_NAME}}"
+MIGRATOR_IMAGE_REF="${MIGRATOR_IMAGE_REF:-${MIGRATOR_IMAGE_NAME}}"
 
 if [[ ! -f "${VERSION_FILE}" ]]; then
     echo "VERSION file not found at ${VERSION_FILE}" >&2
@@ -43,11 +45,21 @@ fi
 echo "Building images with ${CONTAINER_CLI} for version ${APP_VERSION}"
 
 "${CONTAINER_CLI}" build \
+    --target backend \
     --build-arg APP_VERSION="${APP_VERSION}" \
     -t "${BACKEND_IMAGE_NAME}:${APP_VERSION}" \
     -t "${BACKEND_IMAGE_NAME}:latest" \
     -t "${BACKEND_IMAGE_REF}:${APP_VERSION}" \
     -t "${BACKEND_IMAGE_REF}:latest" \
+    "${ROOT_DIR}/backend"
+
+"${CONTAINER_CLI}" build \
+    --target migrator \
+    --build-arg APP_VERSION="${APP_VERSION}" \
+    -t "${MIGRATOR_IMAGE_NAME}:${APP_VERSION}" \
+    -t "${MIGRATOR_IMAGE_NAME}:latest" \
+    -t "${MIGRATOR_IMAGE_REF}:${APP_VERSION}" \
+    -t "${MIGRATOR_IMAGE_REF}:latest" \
     "${ROOT_DIR}/backend"
 
 "${CONTAINER_CLI}" build \
@@ -64,6 +76,10 @@ echo "  ${BACKEND_IMAGE_NAME}:${APP_VERSION}"
 echo "  ${BACKEND_IMAGE_NAME}:latest"
 echo "  ${BACKEND_IMAGE_REF}:${APP_VERSION}"
 echo "  ${BACKEND_IMAGE_REF}:latest"
+echo "  ${MIGRATOR_IMAGE_NAME}:${APP_VERSION}"
+echo "  ${MIGRATOR_IMAGE_NAME}:latest"
+echo "  ${MIGRATOR_IMAGE_REF}:${APP_VERSION}"
+echo "  ${MIGRATOR_IMAGE_REF}:latest"
 echo "  ${FRONTEND_IMAGE_NAME}:${APP_VERSION}"
 echo "  ${FRONTEND_IMAGE_NAME}:latest"
 echo "  ${FRONTEND_IMAGE_REF}:${APP_VERSION}"

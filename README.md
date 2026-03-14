@@ -116,22 +116,38 @@ O script usa [`project.env`](/var/home/lvarjao/dev/pessoal/gosveltekit/project.e
 - `CONTAINER_CLI=podman|docker`
 - `VITE_API_URL=http://localhost:8080`
 
+O build gera três imagens versionadas:
+
+- backend
+- frontend
+- migrator
+
 ## Kubernetes
 
-O manifesto base atual está em [`k8s/gosveltekit.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit.yaml). Depois de `make init`, ele é renomeado para `k8s/<app-name>.yaml`.
+Os manifestos base atuais são:
+
+- [`k8s/gosveltekit-base.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit-base.yaml): namespace, `ConfigMap` e `Secret`
+- [`k8s/gosveltekit-migrate.job.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit-migrate.job.yaml): `Job` dedicado para `goose up`
+- [`k8s/gosveltekit.yaml`](/var/home/lvarjao/dev/pessoal/gosveltekit/k8s/gosveltekit.yaml): `Deployment`, `Service` e `Ingress`
+
+Depois de `make init`, eles são renomeados para `k8s/<app-name>-base.yaml`, `k8s/<app-name>-migrate.job.yaml` e `k8s/<app-name>.yaml`.
 
 Antes de aplicar no cluster, ajuste:
 
 - imagens do backend e frontend
+- imagem do migrator
 - `DATABASE_DSN`
 - credenciais SMTP
 - host do ingress
 
-Aplicação:
+Sequência recomendada de deploy:
 
 ```bash
+make k8s-migrate-job
 kubectl apply -f k8s/gosveltekit.yaml
 ```
+
+O target `make k8s-migrate-job` usa por padrão os valores de `project.env`, mas aceita override via variáveis como `KUBECTL`, `K8S_NAMESPACE`, `K8S_MIGRATE_TIMEOUT`, `K8S_BASE_MANIFEST` e `K8S_MIGRATE_JOB_MANIFEST`.
 
 Para operar frontend e backend sob o mesmo host no ingress, gere a imagem do frontend com `VITE_API_URL=''`.
 

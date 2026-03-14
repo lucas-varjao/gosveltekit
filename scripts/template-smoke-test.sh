@@ -38,6 +38,9 @@ has_stale_template_refs() {
 
 tar \
     --exclude=.git \
+    --exclude=.env \
+    --exclude=backend/.env \
+    --exclude=frontend/.env \
     --exclude=frontend/node_modules \
     --exclude=frontend/build \
     --exclude=frontend/.svelte-kit \

@@ -1,0 +1,29 @@
+# Recreate this Job on each deploy:
+# kubectl delete -f k8s/gosveltekit-migrate.job.yaml --ignore-not-found
+# kubectl create -f k8s/gosveltekit-migrate.job.yaml
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: gosveltekit-migrate
+    namespace: gosveltekit
+spec:
+    backoffLimit: 1
+    ttlSecondsAfterFinished: 300
+    template:
+        metadata:
+            labels:
+                app: gosveltekit-migrator
+        spec:
+            restartPolicy: Never
+            containers:
+                - name: migrate
+                  image: ghcr.io/your-org/gosveltekit-migrator:0.1.0
+                  imagePullPolicy: IfNotPresent
+                  envFrom:
+                      - configMapRef:
+                            name: gosveltekit-config
+                      - secretRef:
+                            name: gosveltekit-secrets
+                  command: ["./migrate"]
+                  args: ["up"]
