@@ -115,12 +115,25 @@ O script usa [`project.env`](/var/home/lvarjao/dev/pessoal/gosveltekit/project.e
 
 - `CONTAINER_CLI=podman|docker`
 - `VITE_API_URL=http://localhost:8080`
+- `PUSH_IMAGES=true|false`
 
 O build gera três imagens versionadas:
 
 - backend
 - frontend
 - migrator
+
+Para publicar as tags remotas configuradas em `*_IMAGE_REF` no Docker Hub ou outro registry compatível:
+
+```bash
+PUSH_IMAGES=true ./scripts/build-images.sh
+```
+
+Ou, pelo `Makefile`:
+
+```bash
+make images PUSH_IMAGES=true
+```
 
 ## Kubernetes
 

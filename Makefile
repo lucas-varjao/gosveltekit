@@ -6,6 +6,7 @@ FRONTEND_DIR := $(ROOT_DIR)/frontend
 VERSION := $(shell tr -d '[:space:]' < $(ROOT_DIR)/VERSION)
 CONTAINER_CLI ?= podman
 VITE_API_URL ?= http://localhost:8080
+PUSH_IMAGES ?= true
 ADMIN_DISPLAY_NAME ?= Administrator
 KUBECTL ?= kubectl
 APP_SLUG ?= $(shell awk -F= '/^APP_SLUG=/{gsub(/"/, "", $$2); print $$2}' $(ROOT_DIR)/project.env)
@@ -69,7 +70,7 @@ help:
 	@printf "  %-18s %s\n" "migrate-down" "Reverte a última migração do banco"
 	@printf "  %-18s %s\n" "migrate-create" "Cria um novo arquivo de migração goose"
 	@printf "  %-18s %s\n" "seed-admin" "Cria ou atualiza o usuário administrador"
-	@printf "  %-18s %s\n" "images" "Builda imagens versionadas com $(CONTAINER_CLI)"
+	@printf "  %-18s %s\n" "images" "Builda imagens versionadas e publica se PUSH_IMAGES=true"
 	@printf "  %-18s %s\n" "k8s-migrate-job" "Aplica base, recria e aguarda o Job de migração"
 	@printf "  %-18s %s\n" "k8s-deploy" "Executa migração, aplica app e aguarda rollout"
 	@printf "  %-18s %s\n\n" "clean" "Remove artefatos de build locais"
@@ -143,7 +144,7 @@ seed-admin:
 	go run ./cmd/seed-admin
 
 images:
-	CONTAINER_CLI=$(CONTAINER_CLI) VITE_API_URL=$(VITE_API_URL) ./scripts/build-images.sh
+	CONTAINER_CLI=$(CONTAINER_CLI) VITE_API_URL=$(VITE_API_URL) PUSH_IMAGES=$(PUSH_IMAGES) ./scripts/build-images.sh
 
 k8s-migrate-job:
 	$(KUBECTL) apply -f $(K8S_BASE_MANIFEST)
