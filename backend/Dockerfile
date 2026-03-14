@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
     -ldflags="-s -w -X 'gosveltekit/internal/version.BuildVersion=${APP_VERSION}'" \
     -o /out/server \
-    ./main.go
+    .
 
 FROM alpine:latest
 

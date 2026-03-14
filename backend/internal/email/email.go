@@ -53,7 +53,7 @@ func (s *EmailService) SendPasswordResetEmail(to, token, username, displayName s
 		Username:     username,
 		ResetLink:    resetLink,
 		DisplayName:  displayName,
-		AppName:      "GoSvelteKit",
+		AppName:      s.config.FromName,
 		SupportEmail: s.config.FromEmail,
 	}
 

@@ -4,8 +4,19 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION_FILE="${ROOT_DIR}/VERSION"
+PROJECT_ENV_FILE="${ROOT_DIR}/project.env"
 CONTAINER_CLI="${CONTAINER_CLI:-podman}"
 VITE_API_URL="${VITE_API_URL:-http://localhost:8080}"
+
+if [[ -f "${PROJECT_ENV_FILE}" ]]; then
+    # shellcheck disable=SC1090
+    source "${PROJECT_ENV_FILE}"
+fi
+
+BACKEND_IMAGE_NAME="${BACKEND_IMAGE_NAME:-gosveltekit-backend}"
+FRONTEND_IMAGE_NAME="${FRONTEND_IMAGE_NAME:-gosveltekit-frontend}"
+BACKEND_IMAGE_REF="${BACKEND_IMAGE_REF:-${BACKEND_IMAGE_NAME}}"
+FRONTEND_IMAGE_REF="${FRONTEND_IMAGE_REF:-${FRONTEND_IMAGE_NAME}}"
 
 if [[ ! -f "${VERSION_FILE}" ]]; then
     echo "VERSION file not found at ${VERSION_FILE}" >&2
@@ -33,19 +44,27 @@ echo "Building images with ${CONTAINER_CLI} for version ${APP_VERSION}"
 
 "${CONTAINER_CLI}" build \
     --build-arg APP_VERSION="${APP_VERSION}" \
-    -t "gosveltekit-backend:${APP_VERSION}" \
-    -t "gosveltekit-backend:latest" \
+    -t "${BACKEND_IMAGE_NAME}:${APP_VERSION}" \
+    -t "${BACKEND_IMAGE_NAME}:latest" \
+    -t "${BACKEND_IMAGE_REF}:${APP_VERSION}" \
+    -t "${BACKEND_IMAGE_REF}:latest" \
     "${ROOT_DIR}/backend"
 
 "${CONTAINER_CLI}" build \
     --build-arg APP_VERSION="${APP_VERSION}" \
     --build-arg VITE_API_URL="${VITE_API_URL}" \
-    -t "gosveltekit-frontend:${APP_VERSION}" \
-    -t "gosveltekit-frontend:latest" \
+    -t "${FRONTEND_IMAGE_NAME}:${APP_VERSION}" \
+    -t "${FRONTEND_IMAGE_NAME}:latest" \
+    -t "${FRONTEND_IMAGE_REF}:${APP_VERSION}" \
+    -t "${FRONTEND_IMAGE_REF}:latest" \
     "${ROOT_DIR}/frontend"
 
 echo "Built images:"
-echo "  gosveltekit-backend:${APP_VERSION}"
-echo "  gosveltekit-backend:latest"
-echo "  gosveltekit-frontend:${APP_VERSION}"
-echo "  gosveltekit-frontend:latest"
+echo "  ${BACKEND_IMAGE_NAME}:${APP_VERSION}"
+echo "  ${BACKEND_IMAGE_NAME}:latest"
+echo "  ${BACKEND_IMAGE_REF}:${APP_VERSION}"
+echo "  ${BACKEND_IMAGE_REF}:latest"
+echo "  ${FRONTEND_IMAGE_NAME}:${APP_VERSION}"
+echo "  ${FRONTEND_IMAGE_NAME}:latest"
+echo "  ${FRONTEND_IMAGE_REF}:${APP_VERSION}"
+echo "  ${FRONTEND_IMAGE_REF}:latest"

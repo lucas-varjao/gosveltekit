@@ -168,7 +168,7 @@ func TestSetupRouter(t *testing.T) {
 			method:         "GET",
 			path:           "/",
 			expectedStatus: http.StatusOK,
-			expectedBody:   map[string]string{"message": "Hello GoSvelteKit"},
+			expectedBody:   map[string]string{"message": "Hello from the starter API"},
 		},
 		{
 			name:           "Ping endpoint",

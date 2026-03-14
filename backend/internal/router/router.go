@@ -39,7 +39,7 @@ func SetupRouter(
 	// Root route
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"message": "Hello GoSvelteKit",
+			"message": "Hello from the starter API",
 		})
 	})
 

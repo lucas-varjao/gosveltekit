@@ -8,18 +8,14 @@ import (
 
 	"gosveltekit/internal/auth"
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
+	"gosveltekit/internal/bootstrap"
 	"gosveltekit/internal/config"
 	"gosveltekit/internal/email"
 	"gosveltekit/internal/handlers"
 	"gosveltekit/internal/middleware"
-	"gosveltekit/internal/models"
 	"gosveltekit/internal/router"
 	"gosveltekit/internal/service"
 	"gosveltekit/internal/version"
-
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -28,38 +24,12 @@ func main() {
 		panic("Falha ao carregar as configurações")
 	}
 
-	dbDSN := cfg.Database.DSN
-
-	// Connect to PostgreSQL
-	db, err := gorm.Open(postgres.Open(dbDSN), &gorm.Config{})
+	db, err := bootstrap.OpenGorm(cfg)
 	if err != nil {
 		panic(
 			"Falha ao conectar ao banco PostgreSQL. Verifique DATABASE_DSN/DATABASE_URL ou database.dsn no app.yml",
 		)
 	}
-
-	// Migrate tables (including new Session table)
-	if err := db.AutoMigrate(&models.User{}, &models.Session{}); err != nil {
-		panic("Falha ao migrar tabelas")
-	}
-
-	// Create admin user if not exists
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
-	if err != nil {
-		slog.Error("failed to hash admin password", "err", err)
-	}
-
-	result := db.Where(models.User{Username: "admin"}).FirstOrCreate(&models.User{
-		Username:     "admin",
-		Email:        "onyx.views5004@eagereverest.com",
-		DisplayName:  "Administrator",
-		PasswordHash: string(passwordHash),
-		Role:         "admin",
-	})
-	if result.Error != nil {
-		slog.Error("failed to create or find admin user", "err", result.Error)
-	}
-	slog.Info("admin user ready", "rows_affected", result.RowsAffected)
 
 	// Initialize adapters
 	userAdapter := gormadapter.NewUserAdapter(db)

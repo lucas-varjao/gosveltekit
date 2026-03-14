@@ -5,6 +5,7 @@
     import '../app.css'
     import { LoaderCircle, LogIn, LogOut, ShieldCheck } from '@lucide/svelte'
     import { page } from '$app/state'
+    import { APP_INFO } from '$lib/config'
     import { authStore } from '$lib/stores/auth'
     import { buttonVariants } from '$lib/components/ui/button'
     import { goto } from '$app/navigation'
@@ -45,6 +46,11 @@
     }
 </script>
 
+<svelte:head>
+    <title>{APP_INFO.displayName}</title>
+    <meta name="description" content={APP_INFO.description} />
+</svelte:head>
+
 <div class="flex min-h-screen flex-col text-slate-100">
     <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/75 backdrop-blur-xl">
         <div class="mx-auto w-full max-w-6xl px-4 py-4">
@@ -52,7 +58,7 @@
                 <div class="flex items-center gap-6">
                     <a href={resolve('/')} class="flex items-center gap-2 text-xl font-bold">
                         <ShieldCheck class="size-5 text-blue-300" />
-                        <span class="brand-gradient">GoSvelteKit</span>
+                        <span class="brand-gradient">{APP_INFO.displayName}</span>
                     </a>
 
                     <div class="hidden items-center gap-2 md:flex">
@@ -121,8 +127,7 @@
         <div
             class="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-1 px-4 py-6 text-center text-sm text-slate-400"
         >
-            <span>&copy; {new Date().getFullYear()} Lucas Varjão - Built with SvelteKit and Go</span
-            >
+            <span>&copy; {new Date().getFullYear()} {APP_INFO.displayName}</span>
             <span class="text-xs tracking-[0.2em] text-slate-500 uppercase">
                 Version {appVersion}
             </span>

@@ -13,10 +13,10 @@ auth:
     allow_cookie_auth: true
     cookie_secure: false # true em produção com HTTPS
 email:
-    smtp_host: "sandbox.smtp.mailtrap.io"
-    smtp_port: 587
-    smtp_username: "da92b160236933"
+    smtp_host: "localhost"
+    smtp_port: 1025
+    smtp_username: ""
     smtp_password: "" # Em produção, use variáveis de ambiente
-    from_email: "no-reply@gosveltekit.com"
+    from_email: "no-reply@gosveltekit.local"
     from_name: "GoSvelteKit"
     reset_url: "http://localhost:5173/reset-password?token=" # URL base para links de recuperação

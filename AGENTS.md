@@ -105,5 +105,5 @@ interface User {
 - Imagens devem ser versionadas a partir de `VERSION`
 - O script padrão para build das imagens é `./scripts/build-images.sh`
 - O script usa `podman` por padrão e aceita `CONTAINER_CLI=docker`
-- Existe um manifesto único em `k8s/gosveltekit.yaml`
+- Existe um manifesto base em `k8s/gosveltekit.yaml`; novos projetos podem renomeá-lo via `make init`
 - As imagens de runtime usam `TZ=America/Sao_Paulo`

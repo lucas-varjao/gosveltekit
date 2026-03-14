@@ -22,22 +22,22 @@ func backendRoot(t *testing.T) string {
 
 func TestMainUsesPostgresDriver(t *testing.T) {
 	root := backendRoot(t)
-	mainPath := filepath.Join(root, "main.go")
+	bootstrapPath := filepath.Join(root, "internal", "bootstrap", "database.go")
 
-	content, err := os.ReadFile(mainPath)
+	content, err := os.ReadFile(bootstrapPath)
 	if err != nil {
-		t.Fatalf("failed to read %s: %v", mainPath, err)
+		t.Fatalf("failed to read %s: %v", bootstrapPath, err)
 	}
 
-	mainContent := string(content)
-	if !strings.Contains(mainContent, "gorm.io/driver/postgres") {
-		t.Fatalf("%s must import gorm.io/driver/postgres", mainPath)
+	bootstrapContent := string(content)
+	if !strings.Contains(bootstrapContent, "gorm.io/driver/postgres") {
+		t.Fatalf("%s must import gorm.io/driver/postgres", bootstrapPath)
 	}
-	if !strings.Contains(mainContent, "postgres.Open(") {
-		t.Fatalf("%s must open database with postgres.Open", mainPath)
+	if !strings.Contains(bootstrapContent, "postgres.Open(") {
+		t.Fatalf("%s must open database with postgres.Open", bootstrapPath)
 	}
-	if strings.Contains(mainContent, "gorm.io/driver/sqlite") || strings.Contains(mainContent, "sqlite.Open(") {
-		t.Fatalf("%s must not reference sqlite driver in runtime bootstrap", mainPath)
+	if strings.Contains(bootstrapContent, "gorm.io/driver/sqlite") || strings.Contains(bootstrapContent, "sqlite.Open(") {
+		t.Fatalf("%s must not reference sqlite driver in runtime bootstrap", bootstrapPath)
 	}
 }
 

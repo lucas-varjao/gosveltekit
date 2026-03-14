@@ -13,6 +13,11 @@ export const API_CONFIG = {
     timeout: 30000
 }
 
+export const APP_INFO = {
+    displayName: __APP_DISPLAY_NAME__,
+    description: __APP_DESCRIPTION__
+}
+
 // Feature flags
 export const FEATURES = {
     enableRegistration: true,

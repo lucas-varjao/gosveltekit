@@ -6,18 +6,44 @@ FRONTEND_DIR := $(ROOT_DIR)/frontend
 VERSION := $(shell tr -d '[:space:]' < $(ROOT_DIR)/VERSION)
 CONTAINER_CLI ?= podman
 VITE_API_URL ?= http://localhost:8080
+ADMIN_DISPLAY_NAME ?= Administrator
 
-.PHONY: help version install backend-install frontend-install dev-backend dev-frontend \
-	build backend-build frontend-build test backend-test frontend-check lint \
-	format images clean
+INIT_ARGS :=
+ifdef APP_NAME
+INIT_ARGS += --app-name "$(APP_NAME)"
+endif
+ifdef DISPLAY_NAME
+INIT_ARGS += --display-name "$(DISPLAY_NAME)"
+endif
+ifdef GO_MODULE
+INIT_ARGS += --go-module "$(GO_MODULE)"
+endif
+ifdef CONTAINER_REGISTRY
+INIT_ARGS += --container-registry "$(CONTAINER_REGISTRY)"
+endif
+ifdef DOMAIN
+INIT_ARGS += --domain "$(DOMAIN)"
+endif
+ifdef K8S_NAMESPACE
+INIT_ARGS += --k8s-namespace "$(K8S_NAMESPACE)"
+endif
+
+.PHONY: help version init bootstrap install backend-install frontend-install infra-up \
+	infra-down dev-backend dev-frontend build backend-build frontend-build test \
+	backend-test frontend-check lint format images migrate-up migrate-down \
+	migrate-create seed-admin clean
 
 help:
 	@printf "\nTargets disponíveis:\n\n"
 	@printf "  %-18s %s\n" "help" "Mostra esta ajuda"
 	@printf "  %-18s %s\n" "version" "Exibe a versão atual do projeto"
+	@printf "  %-18s %s\n" "init" "Inicializa um novo projeto a partir do template"
+	@printf "  %-18s %s\n" "bootstrap" "Gera .env locais e instala dependências"
 	@printf "  %-18s %s\n" "install" "Instala dependências de backend e frontend"
 	@printf "  %-18s %s\n" "backend-install" "Baixa dependências Go"
 	@printf "  %-18s %s\n" "frontend-install" "Instala dependências do frontend com Bun"
+	@printf "  %-18s %s\n" "infra-up" "Sobe PostgreSQL e Mailpit via compose"
+	@printf "  %-18s %s\n" "infra-down" "Derruba a infraestrutura local"
 	@printf "  %-18s %s\n" "dev-backend" "Inicia o backend localmente"
 	@printf "  %-18s %s\n" "dev-frontend" "Inicia o frontend localmente"
 	@printf "  %-18s %s\n" "build" "Executa build de backend e frontend"
@@ -28,11 +54,22 @@ help:
 	@printf "  %-18s %s\n" "frontend-check" "Executa lint e type-check do frontend"
 	@printf "  %-18s %s\n" "lint" "Alias para frontend-check"
 	@printf "  %-18s %s\n" "format" "Formata o backend com gofmt"
+	@printf "  %-18s %s\n" "migrate-up" "Aplica migrações do banco"
+	@printf "  %-18s %s\n" "migrate-down" "Reverte a última migração do banco"
+	@printf "  %-18s %s\n" "migrate-create" "Cria um novo arquivo de migração goose"
+	@printf "  %-18s %s\n" "seed-admin" "Cria ou atualiza o usuário administrador"
 	@printf "  %-18s %s\n" "images" "Builda imagens versionadas com $(CONTAINER_CLI)"
 	@printf "  %-18s %s\n\n" "clean" "Remove artefatos de build locais"
 
 version:
 	@printf "%s\n" "$(VERSION)"
+
+init:
+	./scripts/init-project.sh $(INIT_ARGS) $(ARGS)
+
+bootstrap:
+	./scripts/bootstrap-env.sh
+	$(MAKE) install
 
 install: backend-install frontend-install
 
@@ -42,19 +79,25 @@ backend-install:
 frontend-install:
 	cd $(FRONTEND_DIR) && bun install
 
+infra-up:
+	CONTAINER_CLI=$(CONTAINER_CLI) ./scripts/compose.sh up -d
+
+infra-down:
+	CONTAINER_CLI=$(CONTAINER_CLI) ./scripts/compose.sh down
+
 dev-backend:
-	cd $(BACKEND_DIR) && go run main.go
+	cd $(BACKEND_DIR) && set -a && if [ -f .env ]; then . ./.env; fi && set +a && go run .
 
 dev-frontend:
-	cd $(FRONTEND_DIR) && bun run dev
+	cd $(FRONTEND_DIR) && set -a && if [ -f .env ]; then . ./.env; fi && set +a && bun run dev
 
 build: backend-build frontend-build
 
 backend-build:
-	cd $(BACKEND_DIR) && go build -o bin/server ./main.go
+	cd $(BACKEND_DIR) && go build -o bin/server .
 
 frontend-build:
-	cd $(FRONTEND_DIR) && bun run build
+	cd $(FRONTEND_DIR) && set -a && if [ -f .env ]; then . ./.env; fi && set +a && bun run build
 
 test: backend-test frontend-check
 
@@ -68,6 +111,23 @@ lint: frontend-check
 
 format:
 	cd $(BACKEND_DIR) && gofmt -w $$(find . -name '*.go' -not -path './vendor/*')
+
+migrate-up:
+	cd $(BACKEND_DIR) && set -a && if [ -f .env ]; then . ./.env; fi && set +a && go run ./cmd/migrate up
+
+migrate-down:
+	cd $(BACKEND_DIR) && set -a && if [ -f .env ]; then . ./.env; fi && set +a && go run ./cmd/migrate down
+
+migrate-create:
+	cd $(BACKEND_DIR) && go run ./cmd/migrate create $(name)
+
+seed-admin:
+	cd $(BACKEND_DIR) && set -a && if [ -f .env ]; then . ./.env; fi && set +a && \
+	ADMIN_IDENTIFIER="$(ADMIN_IDENTIFIER)" \
+	ADMIN_EMAIL="$(ADMIN_EMAIL)" \
+	ADMIN_PASSWORD="$(ADMIN_PASSWORD)" \
+	ADMIN_DISPLAY_NAME="$(ADMIN_DISPLAY_NAME)" \
+	go run ./cmd/seed-admin
 
 images:
 	CONTAINER_CLI=$(CONTAINER_CLI) VITE_API_URL=$(VITE_API_URL) ./scripts/build-images.sh
