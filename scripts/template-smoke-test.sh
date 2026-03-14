@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTAINER_CLI="${CONTAINER_CLI:-docker}"
+COMPOSE_CONTAINER_CLI="${CONTAINER_CLI}"
 TEMP_DIR="$(mktemp -d)"
 BACKEND_PID=""
 
@@ -24,6 +25,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
+has_stale_template_refs() {
+    if command -v rg >/dev/null 2>&1; then
+        rg -n 'gosveltekit|GoSvelteKit|gosveltekit.local' \
+            README.md backend frontend k8s compose.yml .env.example backend/.env.example frontend/.env.example Makefile project.env AGENTS.md >/dev/null
+        return
+    fi
+
+    grep -RIE -n 'gosveltekit|GoSvelteKit|gosveltekit.local' \
+        README.md backend frontend k8s compose.yml .env.example backend/.env.example frontend/.env.example Makefile project.env AGENTS.md >/dev/null 2>&1
+}
+
 tar \
     --exclude=.git \
     --exclude=frontend/node_modules \
@@ -42,16 +54,16 @@ make init \
     DOMAIN=acme-starter.local \
     K8S_NAMESPACE=acme-starter
 
-if rg -n 'gosveltekit|GoSvelteKit|gosveltekit.local' \
-    README.md backend frontend k8s compose.yml .env.example backend/.env.example frontend/.env.example Makefile project.env AGENTS.md >/dev/null; then
+if has_stale_template_refs; then
     echo "found stale template references after init" >&2
     exit 1
 fi
 
 make bootstrap
-make infra-up CONTAINER_CLI="${CONTAINER_CLI}"
+make infra-up CONTAINER_CLI="${COMPOSE_CONTAINER_CLI}"
 
 source .env
+CONTAINER_CLI="${COMPOSE_CONTAINER_CLI}"
 
 for attempt in {1..30}; do
     if "${CONTAINER_CLI}" compose -f compose.yml exec -T postgres \
@@ -74,7 +86,7 @@ make seed-admin \
     ADMIN_PASSWORD='Starter123!' \
     ADMIN_DISPLAY_NAME='Platform Admin'
 make build
-CONTAINER_CLI="${CONTAINER_CLI}" VITE_API_URL='' ./scripts/build-images.sh >/dev/null
+CONTAINER_CLI="${COMPOSE_CONTAINER_CLI}" VITE_API_URL='' ./scripts/build-images.sh >/dev/null
 
 make dev-backend >"${TEMP_DIR}/backend.log" 2>&1 &
 BACKEND_PID=$!

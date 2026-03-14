@@ -57,6 +57,23 @@ normalize_registry() {
     printf '%s' "${registry}"
 }
 
+has_stale_project_refs() {
+    if command -v rg >/dev/null 2>&1; then
+        rg -F -n \
+            -e "${CURRENT_APP_SLUG}" \
+            -e "${CURRENT_APP_DISPLAY_NAME}" \
+            -e "${CURRENT_APP_DOMAIN}" \
+            README.md backend frontend k8s compose.yml .env.example backend/.env.example frontend/.env.example Makefile project.env AGENTS.md >/dev/null 2>&1
+        return
+    fi
+
+    grep -RIF -n \
+        -e "${CURRENT_APP_SLUG}" \
+        -e "${CURRENT_APP_DISPLAY_NAME}" \
+        -e "${CURRENT_APP_DOMAIN}" \
+        README.md backend frontend k8s compose.yml .env.example backend/.env.example frontend/.env.example Makefile project.env AGENTS.md >/dev/null 2>&1
+}
+
 replace_in_file() {
     local old_value="$1"
     local new_value="$2"
@@ -207,11 +224,7 @@ fi
     go mod tidy
 )
 
-if rg -F -n \
-    -e "${CURRENT_APP_SLUG}" \
-    -e "${CURRENT_APP_DISPLAY_NAME}" \
-    -e "${CURRENT_APP_DOMAIN}" \
-    README.md backend frontend k8s compose.yml .env.example backend/.env.example frontend/.env.example Makefile project.env AGENTS.md >/dev/null 2>&1; then
+if has_stale_project_refs; then
     echo "Template initialization left stale references to the previous project metadata." >&2
     exit 1
 fi

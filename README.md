@@ -83,6 +83,8 @@ O runtime não executa `AutoMigrate` e não cria usuário admin implicitamente.
 
 Migrações versionadas ficam em [`backend/db/migrations`](/var/home/lvarjao/dev/pessoal/gosveltekit/backend/db/migrations) e são aplicadas com Goose via `make migrate-up`.
 
+Documentação detalhada: [`docs/goose-migrations.md`](/var/home/lvarjao/dev/pessoal/gosveltekit/docs/goose-migrations.md).
+
 O usuário administrador deve ser criado explicitamente:
 
 ```bash
