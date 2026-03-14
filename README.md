@@ -37,6 +37,7 @@ O caminho mais curto para subir um clone limpo é:
 
 ```bash
 make bootstrap
+make install
 make infra-up
 make migrate-up
 make seed-admin ADMIN_IDENTIFIER=admin ADMIN_EMAIL=admin@example.local ADMIN_PASSWORD='Starter123!'
@@ -65,6 +66,7 @@ Comandos relevantes do template:
 
 - `make help`
 - `make bootstrap`
+- `make install`
 - `make infra-up`
 - `make infra-down`
 - `make migrate-up`
