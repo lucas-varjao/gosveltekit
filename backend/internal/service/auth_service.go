@@ -14,6 +14,7 @@ import (
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
 	"gosveltekit/internal/email"
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/pagination"
 	"gosveltekit/internal/validation"
 
 	"golang.org/x/crypto/bcrypt"
@@ -45,7 +46,7 @@ type AuthServiceInterface interface {
 	ChangePassword(userID string, input ChangePasswordInput) error
 	ListSessions(userID, currentSessionID string) ([]SessionInfo, error)
 	RevokeSession(userID, sessionID, currentSessionID string) error
-	ListAdminUsers(input ListAdminUsersInput) (*PaginatedResult[AdminUserRow], error)
+	ListAdminUsers(input ListAdminUsersInput) (*pagination.Response[AdminUserRow], error)
 }
 
 // AuthService handles authentication business logic

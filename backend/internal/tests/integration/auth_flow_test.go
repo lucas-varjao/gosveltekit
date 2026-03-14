@@ -552,35 +552,39 @@ func TestAdminUsersListing(t *testing.T) {
 	regularSession := authResponse["session_id"].(string)
 
 	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/api/admin/users?page=1&page_size=2&sort=email&order=asc", nil)
+	req, _ = http.NewRequest("GET", "/api/admin/users?pagination_mode=offset&page=1&page_size=2&sort=email&order=asc", nil)
 	req.Header.Set("Authorization", "Bearer "+regularSession)
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusForbidden, w.Code)
 
 	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/api/admin/users?page=1&page_size=2&sort=email&order=asc", nil)
+	req, _ = http.NewRequest("GET", "/api/admin/users?pagination_mode=offset&page=1&page_size=2&sort=email&order=asc", nil)
 	req.Header.Set("Authorization", "Bearer "+adminSession)
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	var pageOne struct {
-		Items      []map[string]any `json:"items"`
-		Page       float64          `json:"page"`
-		PageSize   float64          `json:"page_size"`
-		TotalItems float64          `json:"total_items"`
-		TotalPages float64          `json:"total_pages"`
-		Sort       map[string]any   `json:"sort"`
+		Items          []map[string]any `json:"items"`
+		PaginationMode string           `json:"pagination_mode"`
+		Sort           map[string]any   `json:"sort"`
+		Pagination     struct {
+			Page       float64 `json:"page"`
+			PageSize   float64 `json:"page_size"`
+			TotalItems float64 `json:"total_items"`
+			TotalPages float64 `json:"total_pages"`
+		} `json:"pagination"`
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &pageOne))
 	require.Len(t, pageOne.Items, 2)
-	assert.Equal(t, float64(1), pageOne.Page)
-	assert.Equal(t, float64(2), pageOne.PageSize)
-	assert.GreaterOrEqual(t, int(pageOne.TotalItems), 4)
+	assert.Equal(t, "offset", pageOne.PaginationMode)
+	assert.Equal(t, float64(1), pageOne.Pagination.Page)
+	assert.Equal(t, float64(2), pageOne.Pagination.PageSize)
+	assert.GreaterOrEqual(t, int(pageOne.Pagination.TotalItems), 4)
 	assert.Equal(t, "asc", pageOne.Sort["direction"])
 	assert.Equal(t, "adminlist@example.com", pageOne.Items[0]["email"])
 
 	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/api/admin/users?page=1&page_size=10&search=charlie&sort=display_name&order=desc", nil)
+	req, _ = http.NewRequest("GET", "/api/admin/users?pagination_mode=offset&page=1&page_size=10&search=charlie&sort=display_name&order=desc", nil)
 	req.Header.Set("Authorization", "Bearer "+adminSession)
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)

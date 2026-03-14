@@ -18,9 +18,9 @@ GoSvelteKit is a template/base project with a Golang backend and SvelteKit (Svel
 - Sempre priorizar variáveis de ambiente para todas as chaves de configuração.
 - Quando a variável não existir, usar o valor do arquivo `backend/configs/app.yml`.
 - Convenção de nomes: chaves aninhadas viram env em uppercase com `_`:
-    - `server.port` -> `SERVER_PORT`
-    - `auth.session_ttl` -> `AUTH_SESSION_TTL`
-    - `email.smtp_host` -> `EMAIL_SMTP_HOST`
+  - `server.port` -> `SERVER_PORT`
+  - `auth.session_ttl` -> `AUTH_SESSION_TTL`
+  - `email.smtp_host` -> `EMAIL_SMTP_HOST`
 - Banco: `DATABASE_DSN` é o nome preferencial; `DATABASE_URL` é alias compatível.
 
 ### Authentication Architecture
@@ -49,7 +49,17 @@ internal/auth/
 - Always use Svelte 5 with the new runes API (`$state`, `$derived`, `$props`)
 - Data tables should use `shadcn-svelte` + `TanStack Table`
 - Prefer server-side tables: pagination, filter, and sorting must come from the Go backend
-- The reference implementation for this stack lives in `frontend/src/routes/(protected)/admin/+page.svelte`
+- The main generic pagination reference for this stack lives in:
+  - `frontend/src/routes/(protected)/examples/pagination/+page.svelte`
+- Admin-specific pagination references also live in:
+  - `frontend/src/routes/(protected)/admin/+page.svelte`
+  - `frontend/src/routes/(protected)/admin/pagination/offset/+page.svelte`
+  - `frontend/src/routes/(protected)/admin/pagination/cursor/+page.svelte`
+- The generic example page must use data mocked in the Go backend via a protected API route, not static frontend fixtures
+- Backend-driven list endpoints should expose `pagination_mode` explicitly and return a discriminated envelope with:
+  - common fields: `items`, `search`, `sort`, `pagination_mode`
+  - `pagination` object shaped according to `offset` or `cursor`
+- Offset mode is the default reference for tables that need totals; cursor mode is the reference for large datasets with stable sorting
 - A versão exibida no footer deve vir da versão central do projeto
 
 ### Auth Store
@@ -57,12 +67,12 @@ internal/auth/
 ```typescript
 // User fields are snake_case
 interface User {
-    id: string;
-    identifier: string; // username
-    email: string;
-    display_name: string;
-    role: string;
-    active: boolean;
+  id: string;
+  identifier: string; // username
+  email: string;
+  display_name: string;
+  role: string;
+  active: boolean;
 }
 ```
 

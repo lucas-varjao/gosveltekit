@@ -4,7 +4,7 @@
     import { cn } from '$lib/utils'
 
     type Tone = 'info' | 'warning' | 'danger'
-    type AppPath = Parameters<typeof resolve>[0]
+    type AppPath = '/' | '/login' | '/profile' | '/status'
 
     type Props = {
         code: string | number

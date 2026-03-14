@@ -1,173 +1,76 @@
 <script lang="ts">
-    import { onMount } from 'svelte'
-    import { adminApi, type AdminUserRow } from '$lib/api/admin'
-    import type { SortDirection } from '$lib/api/pagination'
-    import AdminUsersTable from '$lib/components/data-table/admin-users-table.svelte'
+    import { resolve } from '$app/paths'
+    import { ArrowRight, Database, TimerReset } from '@lucide/svelte'
     import PageHeader from '$lib/components/layout/page-header.svelte'
-    import { Alert, AlertDescription } from '$lib/components/ui/alert'
-    import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card'
-    import { Button } from '$lib/components/ui/button'
-
-    const pageSize = 10
-
-    let users = $state<AdminUserRow[]>([])
-    let page = $state(1)
-    let totalItems = $state(0)
-    let totalPages = $state(1)
-    let searchValue = $state('')
-    let debouncedSearchValue = $state('')
-    let sortField = $state('created_at')
-    let sortDirection = $state<SortDirection>('desc')
-    let isLoading = $state(false)
-    let errorMessage = $state('')
-    let initialized = $state(false)
-    let requestCounter = 0
-
-    async function loadUsers(params: {
-        page: number
-        search: string
-        sortField: string
-        sortDirection: SortDirection
-    }) {
-        const currentRequest = ++requestCounter
-        isLoading = true
-        errorMessage = ''
-
-        try {
-            const response = await adminApi.listUsers({
-                page: params.page,
-                page_size: pageSize,
-                search: params.search,
-                sort: params.sortField,
-                order: params.sortDirection
-            })
-
-            if (currentRequest !== requestCounter) {
-                return
-            }
-
-            users = response.items
-            totalItems = response.total_items
-            totalPages = response.total_pages
-        } catch (error) {
-            if (currentRequest !== requestCounter) {
-                return
-            }
-
-            errorMessage = error instanceof Error ? error.message : 'Failed to load admin data'
-            users = []
-            totalItems = 0
-            totalPages = 1
-        } finally {
-            if (currentRequest === requestCounter) {
-                isLoading = false
-            }
-        }
-    }
-
-    function handleSearchChange(value: string) {
-        searchValue = value
-        page = 1
-    }
-
-    function handlePageChange(nextPage: number) {
-        page = nextPage
-    }
-
-    function handleSortChange(field: string, direction: SortDirection) {
-        sortField = field
-        sortDirection = direction
-        page = 1
-    }
-
-    function resetFilters() {
-        searchValue = ''
-        debouncedSearchValue = ''
-        sortField = 'created_at'
-        sortDirection = 'desc'
-        page = 1
-    }
-
-    onMount(() => {
-        initialized = true
-    })
-
-    $effect(() => {
-        if (!initialized) {
-            return
-        }
-
-        const currentValue = searchValue
-        const timeout = window.setTimeout(() => {
-            debouncedSearchValue = currentValue.trim()
-        }, 300)
-
-        return () => window.clearTimeout(timeout)
-    })
-
-    $effect(() => {
-        if (!initialized || searchValue.trim() !== debouncedSearchValue) {
-            return
-        }
-
-        void loadUsers({
-            page,
-            search: debouncedSearchValue,
-            sortField,
-            sortDirection
-        })
-    })
+    import { buttonVariants } from '$lib/components/ui/button'
+    import {
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle
+    } from '$lib/components/ui/card'
+    import { cn } from '$lib/utils'
 </script>
 
 <section class="page-shell">
     <PageHeader
-        title="Admin"
-        description="Exemplo oficial de Data Table server-side: o frontend controla a experiência e o backend Go controla paginação, filtro e sorting."
+        title="Admin Pagination"
+        description="Hub oficial com duas estratégias de paginação backend-driven para usar como referência neste template."
         eyebrow="Stack Direction"
     />
 
-    <Card class="surface-card">
-        <CardHeader>
-            <CardTitle>Referência da stack</CardTitle>
-        </CardHeader>
-        <CardContent class="space-y-3 text-sm text-slate-300">
-            <p>
-                Esta página demonstra a direção recomendada para listagens administrativas no
-                template: <strong class="text-white"
-                    ><code>shadcn-svelte</code> + <code>TanStack Table</code></strong
+    <div class="mt-8 grid gap-4 lg:grid-cols-2">
+        <Card class="surface-card">
+            <CardHeader class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <Database class="size-5 text-cyan-300" />
+                    <CardTitle>Offset / Limit</CardTitle>
+                </div>
+                <CardDescription>
+                    Melhor para tabelas administrativas com total de registros, total de páginas e
+                    navegação numérica.
+                </CardDescription>
+            </CardHeader>
+            <CardContent class="space-y-4 text-sm text-slate-300">
+                <p>
+                    Exemplo com <code>pagination_mode=offset</code>, busca server-side, sorting
+                    amplo e metadados completos para tabelas tradicionais.
+                </p>
+                <a
+                    href={resolve('/admin/pagination/offset')}
+                    class={cn(buttonVariants({ variant: 'outline' }), 'w-fit gap-2')}
                 >
-                no frontend e dados paginados vindos do backend Go.
-            </p>
-            <p class="text-slate-400">
-                Endpoint usado: <code>/api/admin/users</code> com <code>page</code>,
-                <code>page_size</code>, <code>search</code>, <code>sort</code> e
-                <code>order</code>.
-            </p>
-        </CardContent>
-    </Card>
+                    Abrir exemplo offset
+                    <ArrowRight class="size-4" />
+                </a>
+            </CardContent>
+        </Card>
 
-    {#if errorMessage}
-        <Alert variant="destructive" class="mt-8 border-red-500/60 bg-red-950/50 text-red-200">
-            <AlertDescription>{errorMessage}</AlertDescription>
-        </Alert>
-    {/if}
-
-    <AdminUsersTable
-        rows={users}
-        {page}
-        {pageSize}
-        {totalItems}
-        {totalPages}
-        {searchValue}
-        {sortField}
-        {sortDirection}
-        {isLoading}
-        onSearchChange={handleSearchChange}
-        onPageChange={handlePageChange}
-        onSortChange={handleSortChange}
-    />
-
-    <div class="mt-4 flex justify-end">
-        <Button variant="ghost" size="sm" onclick={resetFilters}>Limpar filtros</Button>
+        <Card class="surface-card">
+            <CardHeader class="space-y-3">
+                <div class="flex items-center gap-3">
+                    <TimerReset class="size-5 text-blue-300" />
+                    <CardTitle>Cursor-Based</CardTitle>
+                </div>
+                <CardDescription>
+                    Melhor para volumes grandes, com cursores opacos, navegação eficiente e
+                    ordenação estável.
+                </CardDescription>
+            </CardHeader>
+            <CardContent class="space-y-4 text-sm text-slate-300">
+                <p>
+                    Exemplo com <code>pagination_mode=cursor</code>, navegação bidirecional por
+                    cursor e sorts limitados a campos estáveis.
+                </p>
+                <a
+                    href={resolve('/admin/pagination/cursor')}
+                    class={cn(buttonVariants({ variant: 'outline' }), 'w-fit gap-2')}
+                >
+                    Abrir exemplo cursor
+                    <ArrowRight class="size-4" />
+                </a>
+            </CardContent>
+        </Card>
     </div>
 </section>

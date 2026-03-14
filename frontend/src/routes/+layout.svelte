@@ -19,7 +19,7 @@
     let pathname = $derived(page.url.pathname)
     const appVersion = `v${__APP_VERSION__}`
 
-    type AppPath = Parameters<typeof resolve>[0]
+    type AppPath = '/' | '/status' | '/profile' | '/settings' | '/admin' | '/examples/pagination'
 
     const navLinks: Array<{ path: AppPath; label: string }> = [
         { path: '/', label: 'Home' },
@@ -29,6 +29,7 @@
     const protectedNavLinks: Array<{ path: AppPath; label: string }> = [
         { path: '/profile', label: 'Profile' },
         { path: '/settings', label: 'Settings' },
+        { path: '/examples/pagination', label: 'Examples' },
         { path: '/admin', label: 'Admin' }
     ]
 

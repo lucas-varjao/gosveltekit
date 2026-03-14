@@ -95,6 +95,7 @@ func SetupRouter(
 	api.POST("/account/change-password", authHandler.ChangeAccountPassword)
 	api.GET("/account/sessions", authHandler.ListAccountSessions)
 	api.DELETE("/account/sessions/:session_id", authHandler.RevokeAccountSession)
+	api.GET("/examples/pagination/items", authHandler.ListMockPaginationItems)
 
 	// Admin only routes
 	admin := api.Group("/admin")

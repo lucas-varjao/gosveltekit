@@ -13,6 +13,7 @@ import (
 
 	"gosveltekit/internal/auth"
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/pagination"
 	"gosveltekit/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +33,7 @@ type MockAuthService struct {
 	ChangePasswordFunc       func(userID string, input service.ChangePasswordInput) error
 	ListSessionsFunc         func(userID, currentSessionID string) ([]service.SessionInfo, error)
 	RevokeSessionFunc        func(userID, sessionID, currentSessionID string) error
-	ListAdminUsersFunc       func(input service.ListAdminUsersInput) (*service.PaginatedResult[service.AdminUserRow], error)
+	ListAdminUsersFunc       func(input service.ListAdminUsersInput) (*pagination.Response[service.AdminUserRow], error)
 }
 
 func (m *MockAuthService) Login(username, password, ip, userAgent string) (*service.LoginResponse, error) {
@@ -124,7 +125,7 @@ func (m *MockAuthService) RevokeSession(userID, sessionID, currentSessionID stri
 
 func (m *MockAuthService) ListAdminUsers(
 	input service.ListAdminUsersInput,
-) (*service.PaginatedResult[service.AdminUserRow], error) {
+) (*pagination.Response[service.AdminUserRow], error) {
 	if m.ListAdminUsersFunc == nil {
 		return nil, nil
 	}

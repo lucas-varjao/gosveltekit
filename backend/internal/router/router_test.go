@@ -12,6 +12,7 @@ import (
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
 	"gosveltekit/internal/handlers"
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/pagination"
 	"gosveltekit/internal/service"
 	"gosveltekit/internal/testutil"
 
@@ -115,15 +116,18 @@ func (m *MockAuthService) RevokeSession(userID, sessionID, currentSessionID stri
 
 func (m *MockAuthService) ListAdminUsers(
 	input service.ListAdminUsersInput,
-) (*service.PaginatedResult[service.AdminUserRow], error) {
-	return &service.PaginatedResult[service.AdminUserRow]{
-		Items:      []service.AdminUserRow{},
-		Page:       input.Page,
-		PageSize:   input.PageSize,
-		TotalPages: 1,
-		Sort: service.AdminUsersSort{
+) (*pagination.Response[service.AdminUserRow], error) {
+	return &pagination.Response[service.AdminUserRow]{
+		Items:          []service.AdminUserRow{},
+		PaginationMode: pagination.ModeOffset,
+		Sort: pagination.Sort{
 			Field:     "created_at",
-			Direction: "desc",
+			Direction: pagination.SortDesc,
+		},
+		Pagination: pagination.OffsetMetadata{
+			Page:       1,
+			PageSize:   10,
+			TotalPages: 1,
 		},
 	}, nil
 }

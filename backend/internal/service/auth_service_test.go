@@ -3,11 +3,13 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"gosveltekit/internal/auth"
 	gormadapter "gosveltekit/internal/auth/adapter/gorm"
 	"gosveltekit/internal/email"
 	"gosveltekit/internal/models"
+	"gosveltekit/internal/pagination"
 	"gosveltekit/internal/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -261,28 +263,110 @@ func TestAuthService_ListAdminUsers(t *testing.T) {
 	require.NoError(t, db.Create(&users).Error)
 
 	result, err := authService.ListAdminUsers(ListAdminUsersInput{
-		Page:     1,
-		PageSize: 1,
-		Sort:     "email",
-		Order:    "asc",
+		PaginationMode: pagination.ModeOffset,
+		Offset: &pagination.OffsetQuery{
+			Page:     1,
+			PageSize: 1,
+			Sort:     "email",
+			Order:    pagination.SortAsc,
+		},
 	})
 	require.NoError(t, err)
 	require.Len(t, result.Items, 1)
-	assert.Equal(t, int64(2), result.TotalItems)
+	assert.Equal(t, pagination.ModeOffset, result.PaginationMode)
 	assert.Equal(t, "anna@example.com", result.Items[0].Email)
-	assert.Equal(t, 2, result.TotalPages)
+	offsetPagination, ok := result.Pagination.(pagination.OffsetMetadata)
+	require.True(t, ok)
+	assert.Equal(t, int64(2), offsetPagination.TotalItems)
+	assert.Equal(t, 2, offsetPagination.TotalPages)
 }
 
 func TestAuthService_ListAdminUsers_InvalidQuery(t *testing.T) {
 	authService, _, _, _, _, _ := setupTest(t)
 
 	result, err := authService.ListAdminUsers(ListAdminUsersInput{
-		Page:     1,
-		PageSize: 10,
-		Sort:     "drop_table",
-		Order:    "asc",
+		PaginationMode: pagination.ModeOffset,
+		Offset: &pagination.OffsetQuery{
+			Page:     1,
+			PageSize: 10,
+			Sort:     "drop_table",
+			Order:    pagination.SortAsc,
+		},
 	})
 
 	assert.Nil(t, result)
 	assert.ErrorIs(t, err, ErrInvalidAdminUsersQuery)
+}
+
+func TestAuthService_ListAdminUsers_Cursor(t *testing.T) {
+	authService, _, _, _, _, db := setupTest(t)
+	users := []*models.User{
+		{
+			Model:        gorm.Model{CreatedAt: time.Date(2026, 3, 14, 10, 0, 0, 0, time.UTC)},
+			Username:     "anna",
+			Email:        "anna@example.com",
+			DisplayName:  "Anna Doe",
+			PasswordHash: "hash",
+		},
+		{
+			Model:        gorm.Model{CreatedAt: time.Date(2026, 3, 14, 11, 0, 0, 0, time.UTC)},
+			Username:     "bella",
+			Email:        "bella@example.com",
+			DisplayName:  "Bella Doe",
+			PasswordHash: "hash",
+		},
+		{
+			Model:        gorm.Model{CreatedAt: time.Date(2026, 3, 14, 12, 0, 0, 0, time.UTC)},
+			Username:     "carla",
+			Email:        "carla@example.com",
+			DisplayName:  "Carla Doe",
+			PasswordHash: "hash",
+		},
+	}
+	require.NoError(t, db.Create(&users).Error)
+
+	firstPage, err := authService.ListAdminUsers(ListAdminUsersInput{
+		PaginationMode: pagination.ModeCursor,
+		Cursor: &pagination.CursorQuery{
+			PageSize: 2,
+			Sort:     "created_at",
+			Order:    pagination.SortAsc,
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, firstPage.Items, 2)
+	cursorPagination, ok := firstPage.Pagination.(pagination.CursorMetadata)
+	require.True(t, ok)
+	require.NotNil(t, cursorPagination.NextCursor)
+	assert.False(t, cursorPagination.HasPrev)
+	assert.True(t, cursorPagination.HasNext)
+
+	secondPage, err := authService.ListAdminUsers(ListAdminUsersInput{
+		PaginationMode: pagination.ModeCursor,
+		Cursor: &pagination.CursorQuery{
+			PageSize: 2,
+			Sort:     "created_at",
+			Order:    pagination.SortAsc,
+			After:    *cursorPagination.NextCursor,
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, secondPage.Items, 1)
+	assert.Equal(t, "carla@example.com", secondPage.Items[0].Email)
+}
+
+func TestAuthService_ListAdminUsers_CursorUnsupportedSort(t *testing.T) {
+	authService, _, _, _, _, _ := setupTest(t)
+
+	result, err := authService.ListAdminUsers(ListAdminUsersInput{
+		PaginationMode: pagination.ModeCursor,
+		Cursor: &pagination.CursorQuery{
+			PageSize: 10,
+			Sort:     "display_name",
+			Order:    pagination.SortAsc,
+		},
+	})
+
+	assert.Nil(t, result)
+	assert.ErrorIs(t, err, ErrUnsupportedCursorSort)
 }

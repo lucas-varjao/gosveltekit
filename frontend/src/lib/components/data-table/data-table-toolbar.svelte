@@ -4,12 +4,19 @@
 
     type Props = {
         searchValue: string
-        totalItems: number
+        totalItems?: number
+        statusText?: string
         isLoading?: boolean
         onSearchChange?: (value: string) => void
     }
 
-    let { searchValue, totalItems, isLoading = false, onSearchChange }: Props = $props()
+    let {
+        searchValue,
+        totalItems,
+        statusText = '',
+        isLoading = false,
+        onSearchChange
+    }: Props = $props()
 </script>
 
 <div class="flex flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between">
@@ -28,8 +35,12 @@
     <div class="text-sm text-slate-400">
         {#if isLoading}
             Atualizando resultados...
-        {:else}
+        {:else if statusText}
+            {statusText}
+        {:else if totalItems !== undefined}
             {totalItems} registro{totalItems === 1 ? '' : 's'}
+        {:else}
+            Resultados carregados do backend.
         {/if}
     </div>
 </div>

@@ -23,7 +23,8 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 - Gerenciamento de estado com Svelte 5 runes (`$state`, `$derived`)
 - Layout responsivo com TailwindCSS
 - Componentes UI seguindo o padrão **shadcn-svelte**
-- Exemplo de Data Table server-side em `/admin` com **TanStack Table**
+- Hub de exemplos de Data Table server-side em `/admin` com referências offset e cursor-based
+- Página genérica de playground em `/examples/pagination` com dados mockados no backend
 - Ícones SVG com **@lucide/svelte** (Svelte 5)
 - Sessão baseada em cookie HttpOnly no navegador
 
@@ -189,7 +190,9 @@ gosveltekit/
 
 ## 📊 Data Tables
 
-O projeto agora inclui uma referência oficial de tabela administrativa em `frontend/src/routes/(protected)/admin/+page.svelte`.
+O projeto agora inclui um hub oficial de paginação administrativa em `frontend/src/routes/(protected)/admin/+page.svelte`.
+
+Também inclui uma página de playground genérica em `frontend/src/routes/(protected)/examples/pagination/+page.svelte`, consumindo dados mockados servidos pelo backend em `/api/examples/pagination/items`.
 
 Direção da stack:
 
@@ -198,37 +201,98 @@ Direção da stack:
 - paginação, filtro e sorting controlados pelo backend Go
 - contrato HTTP explícito para listagens server-side
 
+### Rotas de referência
+
+- `/examples/pagination`: página única com os dois tipos de paginação usando dados mockados no backend
+- `/admin`: hub com contexto e links para os exemplos
+- `/admin/pagination/offset`: exemplo com paginação numérica e totais
+- `/admin/pagination/cursor`: exemplo com cursores opacos e navegação bidirecional
+
+### Quando usar cada estratégia
+
+- `offset`: melhor para telas administrativas que precisam de `total_items`, `total_pages` e paginação numerada
+- `cursor`: melhor para datasets grandes, onde o custo de `OFFSET` cresce e a navegação pode ser feita por cursores estáveis
+
 ### Endpoint de referência
 
 ```http
-GET /api/admin/users?page=1&page_size=10&search=admin&sort=created_at&order=desc
+GET /api/examples/pagination/items?pagination_mode=offset&page=1&page_size=8&search=analytics&sort=created_at&order=desc
 ```
 
-### Resposta de referência
+```http
+GET /api/examples/pagination/items?pagination_mode=cursor&page_size=8&search=analytics&sort=title&order=asc&after=eyJzb3J0IjoidGl0bGUiLC4uLn0
+```
+
+### Endpoint administrativo de referência
+
+```http
+GET /api/admin/users?pagination_mode=offset&page=1&page_size=10&search=admin&sort=created_at&order=desc
+```
+
+```http
+GET /api/admin/users?pagination_mode=cursor&page_size=10&search=admin&sort=email&order=asc&after=eyJzb3J0IjoiZW1haWwiLC4uLn0
+```
+
+### Resposta `offset`
 
 ```json
 {
-    "items": [
-        {
-            "id": "1",
-            "identifier": "admin",
-            "email": "admin@example.com",
-            "display_name": "Administrator",
-            "role": "admin",
-            "active": true,
-            "last_login": "2026-03-14T10:00:00Z",
-            "created_at": "2026-01-10T08:00:00Z"
-        }
-    ],
+  "items": [
+    {
+      "id": "1",
+      "identifier": "admin",
+      "email": "admin@example.com",
+      "display_name": "Administrator",
+      "role": "admin",
+      "active": true,
+      "last_login": "2026-03-14T10:00:00Z",
+      "created_at": "2026-01-10T08:00:00Z"
+    }
+  ],
+  "sort": {
+    "field": "created_at",
+    "direction": "desc"
+  },
+  "pagination_mode": "offset",
+  "pagination": {
     "page": 1,
     "page_size": 10,
     "total_items": 1,
-    "total_pages": 1,
-    "sort": {
-        "field": "created_at",
-        "direction": "desc"
-    },
-    "search": "admin"
+    "total_pages": 1
+  },
+  "search": "admin"
+}
+```
+
+### Resposta `cursor`
+
+```json
+{
+  "items": [
+    {
+      "id": "11",
+      "identifier": "admin",
+      "email": "admin@example.com",
+      "display_name": "Administrator",
+      "role": "admin",
+      "active": true,
+      "last_login": "2026-03-14T10:00:00Z",
+      "created_at": "2026-01-10T08:00:00Z"
+    }
+  ],
+  "sort": {
+    "field": "email",
+    "direction": "asc"
+  },
+  "pagination_mode": "cursor",
+  "pagination": {
+    "page_size": 10,
+    "next_cursor": "eyJzb3J0IjoiZW1haWwiLC4uLn0",
+    "prev_cursor": "eyJzb3J0IjoiZW1haWwiLC4uLn0",
+    "has_next": true,
+    "has_prev": true
+  },
+  "search": "admin"
 }
 ```
 
@@ -237,10 +301,15 @@ GET /api/admin/users?page=1&page_size=10&search=admin&sort=created_at&order=desc
 Para novas listagens administrativas:
 
 - crie endpoints paginados no backend Go em vez de retornar arrays completos
+- para exemplos genéricos do template, prefira servir dados mockados pelo backend em vez de mockar no frontend
+- use `pagination_mode` explicitamente quando um endpoint suportar mais de uma estratégia
 - mantenha filtros e ordenação como query params simples
 - use `snake_case` no contrato JSON
+- use um envelope discriminado com `pagination_mode` e `pagination`
 - trate `TanStack Table` como camada de comportamento, e `shadcn-svelte` como base visual
-- use a tela `/admin` como referência para paginação, busca e ordenação server-side
+- use `/examples/pagination` como referência genérica do template
+- use `/admin` como hub e as páginas `/admin/pagination/offset` e `/admin/pagination/cursor` como referência
+- no modo cursor, priorize sorts estáveis e não exponha totais quando eles não forem necessários
 
 ## 🔐 Autenticação
 
@@ -265,15 +334,15 @@ type SessionAdapter interface {
 
 ```json
 {
-    "session_id": "abc123...",
-    "expires_at": "2024-02-11T12:00:00Z",
-    "user": {
-        "id": "1",
-        "identifier": "admin",
-        "email": "admin@example.com",
-        "display_name": "Administrator",
-        "role": "admin"
-    }
+  "session_id": "abc123...",
+  "expires_at": "2024-02-11T12:00:00Z",
+  "user": {
+    "id": "1",
+    "identifier": "admin",
+    "email": "admin@example.com",
+    "display_name": "Administrator",
+    "role": "admin"
+  }
 }
 ```
 

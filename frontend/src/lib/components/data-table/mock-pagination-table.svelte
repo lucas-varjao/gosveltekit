@@ -8,12 +8,9 @@
         type ColumnDef,
         type SortingState
     } from '@tanstack/svelte-table'
-    import type { AdminUserRow } from '$lib/api/admin'
-    import type { SortDirection } from '$lib/api/pagination'
+    import type { MockPaginationItem } from '$lib/api/mock-pagination'
+    import type { PaginationMode, SortDirection } from '$lib/api/pagination'
     import DateCell from '$lib/components/data-table/cells/date-cell.svelte'
-    import EmailCell from '$lib/components/data-table/cells/email-cell.svelte'
-    import NameCell from '$lib/components/data-table/cells/name-cell.svelte'
-    import RoleCell from '$lib/components/data-table/cells/role-cell.svelte'
     import StatusCell from '$lib/components/data-table/cells/status-cell.svelte'
     import {
         Table,
@@ -23,20 +20,18 @@
         TableHeader,
         TableRow
     } from '$lib/components/ui/table'
-    import type { PaginationMode } from '$lib/api/pagination'
     import DataTableCursorPagination from './data-table-cursor-pagination.svelte'
     import DataTablePagination from './data-table-pagination.svelte'
     import DataTableToolbar from './data-table-toolbar.svelte'
 
     type Props = {
         mode: PaginationMode
-        rows: AdminUserRow[]
+        rows: MockPaginationItem[]
         pageSize: number
         searchValue: string
         sortField: string
         sortDirection: SortDirection
         sortableFields?: string[]
-        primaryIdentitySortField?: 'display_name' | 'identifier'
         page?: number
         totalItems?: number
         totalPages?: number
@@ -55,15 +50,14 @@
     let {
         mode,
         rows,
-        page = 1,
         pageSize,
-        totalItems,
-        totalPages = 1,
         searchValue,
         sortField,
         sortDirection,
-        sortableFields = ['display_name', 'email', 'role', 'created_at', 'last_login'],
-        primaryIdentitySortField = 'display_name',
+        sortableFields = ['title', 'category', 'priority', 'created_at'],
+        page = 1,
+        totalItems,
+        totalPages = 1,
         hasNext = false,
         hasPrev = false,
         nextCursor,
@@ -81,29 +75,22 @@
 
         return [
             {
-                id: primaryIdentitySortField,
-                accessorFn: (row: AdminUserRow) =>
-                    primaryIdentitySortField === 'identifier' ? row.identifier : row.display_name,
-                header: 'Usuário',
-                enableSorting: sortableFieldSet.has(primaryIdentitySortField),
-                cell: (info) =>
-                    renderComponent(NameCell, {
-                        displayName: info.row.original.display_name,
-                        identifier: info.row.original.identifier
-                    })
+                accessorKey: 'title',
+                header: 'Item',
+                enableSorting: sortableFieldSet.has('title'),
+                cell: (info) => String(info.getValue() ?? '')
             },
             {
-                accessorKey: 'email',
-                header: 'Email',
-                enableSorting: sortableFieldSet.has('email'),
-                cell: (info) => renderComponent(EmailCell, { email: String(info.getValue() ?? '') })
+                accessorKey: 'category',
+                header: 'Categoria',
+                enableSorting: sortableFieldSet.has('category'),
+                cell: (info) => String(info.getValue() ?? '')
             },
             {
-                accessorKey: 'role',
-                header: 'Papel',
-                enableSorting: sortableFieldSet.has('role'),
-                cell: (info) =>
-                    renderComponent(RoleCell, { role: String(info.getValue() ?? 'user') })
+                accessorKey: 'priority',
+                header: 'Prioridade',
+                enableSorting: sortableFieldSet.has('priority'),
+                cell: (info) => String(info.getValue() ?? '')
             },
             {
                 accessorKey: 'active',
@@ -116,14 +103,8 @@
                 header: 'Criado em',
                 enableSorting: sortableFieldSet.has('created_at'),
                 cell: (info) => renderComponent(DateCell, { value: String(info.getValue() ?? '') })
-            },
-            {
-                accessorKey: 'last_login',
-                header: 'Último login',
-                enableSorting: sortableFieldSet.has('last_login'),
-                cell: (info) => renderComponent(DateCell, { value: String(info.getValue() ?? '') })
             }
-        ] satisfies ColumnDef<AdminUserRow>[]
+        ] satisfies ColumnDef<MockPaginationItem>[]
     })
 
     let sorting = $derived<SortingState>(
@@ -169,7 +150,7 @@
     }
 </script>
 
-<div class="surface-card mt-8 overflow-hidden">
+<div class="surface-card mt-6 overflow-hidden">
     <DataTableToolbar {searchValue} {totalItems} {statusText} {isLoading} {onSearchChange} />
 
     <div class="border-y border-slate-800/70">
@@ -219,7 +200,7 @@
                             colspan={columns.length}
                             class="py-10 text-center text-slate-400"
                         >
-                            Carregando usuários do backend...
+                            Carregando dados mockados do backend...
                         </TableCell>
                     </TableRow>
                 {:else if rows.length === 0}
@@ -228,7 +209,7 @@
                             colspan={columns.length}
                             class="py-10 text-center text-slate-400"
                         >
-                            Nenhum usuário encontrado para os filtros atuais.
+                            Nenhum item encontrado para os filtros atuais.
                         </TableCell>
                     </TableRow>
                 {:else}

@@ -1,18 +1,16 @@
 import { apiRequest } from './client'
 import type { PaginatedResponse, PaginationMode, SortDirection } from './pagination'
 
-export interface AdminUserRow {
+export interface MockPaginationItem {
     id: string
-    identifier: string
-    email: string
-    display_name: string
-    role: string
+    title: string
+    category: string
+    priority: string
     active: boolean
-    last_login: string
     created_at: string
 }
 
-interface BaseListAdminUsersParams {
+interface BaseMockPaginationParams {
     pagination_mode: PaginationMode
     page_size?: number
     search?: string
@@ -20,20 +18,20 @@ interface BaseListAdminUsersParams {
     order?: SortDirection
 }
 
-export interface ListAdminUsersOffsetParams extends BaseListAdminUsersParams {
+export interface MockPaginationOffsetParams extends BaseMockPaginationParams {
     pagination_mode: 'offset'
     page?: number
 }
 
-export interface ListAdminUsersCursorParams extends BaseListAdminUsersParams {
+export interface MockPaginationCursorParams extends BaseMockPaginationParams {
     pagination_mode: 'cursor'
     after?: string
     before?: string
 }
 
-export type ListAdminUsersParams = ListAdminUsersOffsetParams | ListAdminUsersCursorParams
+export type MockPaginationParams = MockPaginationOffsetParams | MockPaginationCursorParams
 
-function buildUsersQuery(params: ListAdminUsersParams) {
+function buildMockPaginationQuery(params: MockPaginationParams) {
     const query = new URLSearchParams()
 
     query.set('pagination_mode', params.pagination_mode)
@@ -70,10 +68,12 @@ function buildUsersQuery(params: ListAdminUsersParams) {
     return search ? `?${search}` : ''
 }
 
-export const adminApi = {
-    listUsers: async (params: ListAdminUsersParams): Promise<PaginatedResponse<AdminUserRow>> => {
-        return apiRequest<PaginatedResponse<AdminUserRow>>(
-            `/api/admin/users${buildUsersQuery(params)}`,
+export const mockPaginationApi = {
+    listItems: async (
+        params: MockPaginationParams
+    ): Promise<PaginatedResponse<MockPaginationItem>> => {
+        return apiRequest<PaginatedResponse<MockPaginationItem>>(
+            `/api/examples/pagination/items${buildMockPaginationQuery(params)}`,
             {
                 method: 'GET',
                 requiresAuth: true
