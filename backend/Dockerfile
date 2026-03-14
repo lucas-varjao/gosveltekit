@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o /out/server \
     ./main.go
 
-FROM alpine:3.22
+FROM alpine:latest
 
 WORKDIR /app
 
@@ -32,6 +32,7 @@ RUN apk add --no-cache ca-certificates tzdata \
 COPY --from=builder /out/server ./server
 COPY configs ./configs
 
+ENV TZ=America/Sao_Paulo
 ENV GIN_MODE=release
 
 EXPOSE 8080

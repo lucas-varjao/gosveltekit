@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM oven/bun:1.2.23-alpine AS builder
+FROM oven/bun:alpine AS builder
 
 WORKDIR /app
 
@@ -16,14 +16,18 @@ COPY . .
 
 RUN bun run build
 
-FROM nginx:1.29-alpine
+FROM nginx:stable-alpine
 
 ARG APP_VERSION=dev
 
 LABEL org.opencontainers.image.version=$APP_VERSION
 
+RUN apk add --no-cache tzdata
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/build /usr/share/nginx/html
+
+ENV TZ=America/Sao_Paulo
 
 EXPOSE 80
 
