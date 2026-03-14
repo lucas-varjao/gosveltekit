@@ -16,6 +16,7 @@
     let isLoading = $derived($authStore.isLoading)
     let user = $derived($authStore.user)
     let pathname = $derived(page.url.pathname)
+    const appVersion = `v${__APP_VERSION__}`
 
     type AppPath = Parameters<typeof resolve>[0]
 
@@ -114,10 +115,14 @@
         {@render children()}
     </main>
 
-    <footer class="flex h-24 items-center justify-center border-t border-slate-800/80">
-        <div class="mx-auto w-full max-w-6xl px-4 py-6 text-center text-sm text-slate-400">
-            <span>&copy; {new Date().getFullYear()} Lucas Varjão - Built with SvelteKit and Go</span
-            >
+    <footer class="border-t border-slate-800/80">
+        <div
+            class="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-1 px-4 py-6 text-center text-sm text-slate-400"
+        >
+            <span>&copy; {new Date().getFullYear()} Lucas Varjão - Built with SvelteKit and Go</span>
+            <span class="text-xs uppercase tracking-[0.2em] text-slate-500">
+                Version {appVersion}
+            </span>
         </div>
     </footer>
 </div>

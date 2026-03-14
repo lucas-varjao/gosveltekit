@@ -28,9 +28,9 @@ GoSvelteKit é um projeto base projetado para acelerar o desenvolvimento de apli
 
 ## 🛠️ Pré-requisitos
 
--   Go 1.21+
+-   Go 1.26+
 -   Bun (ou Node.js 18+)
--   Docker e Docker Compose (opcional)
+-   Podman ou Docker (opcional)
 
 ## 🔧 Instalação e Uso
 
@@ -41,10 +41,27 @@ git clone https://github.com/lucas-varjao/gosveltekit.git meu-novo-projeto
 cd meu-novo-projeto
 ```
 
-### Usando Docker Compose (recomendado)
+### Build versionado de imagens
 
 ```bash
-docker-compose up
+./scripts/build-images.sh
+```
+
+Por padrão o script usa `podman`, lê a versão de `VERSION` e gera as tags:
+
+- `gosveltekit-backend:<versao>` e `gosveltekit-backend:latest`
+- `gosveltekit-frontend:<versao>` e `gosveltekit-frontend:latest`
+
+Para usar Docker em vez de Podman:
+
+```bash
+CONTAINER_CLI=docker ./scripts/build-images.sh
+```
+
+Para apontar o frontend para outra API no build da imagem:
+
+```bash
+VITE_API_URL='https://api.seu-dominio.com' ./scripts/build-images.sh
 ```
 
 ### Execução manual
@@ -57,12 +74,34 @@ go mod download
 go run main.go
 ```
 
+Ao iniciar localmente via `backend/`, o servidor resolve a versão a partir do arquivo raiz `../VERSION` e exibe esse valor no log de startup.
+
 #### Frontend
 
 ```bash
 cd frontend
 bun install
 bun run dev
+```
+
+Em desenvolvimento e build de produção, o frontend lê a mesma versão central de `../VERSION` e a exibe no rodapé.
+
+### Execução das imagens
+
+#### Backend
+
+```bash
+podman run --rm -p 8080:8080 \
+  -e DATABASE_DSN='postgresql://gosvelte:gosvelte@host.containers.internal:5432/gosveltekit?sslmode=disable' \
+  gosveltekit-backend:0.1.0
+```
+
+Com Docker, ajuste o host do banco conforme o seu ambiente.
+
+#### Frontend
+
+```bash
+podman run --rm -p 3000:80 gosveltekit-frontend:0.1.0
 ```
 
 ## 📁 Estrutura do Projeto
@@ -196,6 +235,28 @@ export DATABASE_DSN='postgresql://postgres:postgres@localhost:5432/gosveltekit?s
 Compatibilidade de banco: `DATABASE_URL` também é aceito como alias de `DATABASE_DSN`.
 
 Observação sobre testes: a suíte automatizada do backend usa SQLite em memória para manter execução rápida.
+
+## 🏷️ Versionamento
+
+O arquivo raiz `VERSION` é a fonte canônica da versão do projeto.
+
+```bash
+cat VERSION
+0.1.0
+```
+
+Regras:
+
+- O formato é `MAJOR.MINOR.PATCH`, sem prefixo `v`
+- Backend, frontend e imagens devem consumir esse mesmo valor
+- A interface e os logs podem exibir `v` ao renderizar a versão
+
+Fluxo:
+
+- Backend: usa `ldflags`, depois `APP_VERSION`, depois `../VERSION`, e por fim fallback `dev`
+- Frontend: usa `APP_VERSION` no build de imagem e `../VERSION` em dev/build local
+- Imagens: recebem `APP_VERSION` no build e publicam label OCI `org.opencontainers.image.version`
+- Tags geradas pelo script: `gosveltekit-backend:<versao>`, `gosveltekit-backend:latest`, `gosveltekit-frontend:<versao>` e `gosveltekit-frontend:latest`
 
 ## 🔄 Começando um Novo Projeto
 

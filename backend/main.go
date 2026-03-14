@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -14,6 +15,7 @@ import (
 	"gosveltekit/internal/models"
 	"gosveltekit/internal/router"
 	"gosveltekit/internal/service"
+	"gosveltekit/internal/version"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
@@ -96,8 +98,9 @@ func main() {
 	r := router.SetupRouter(authHandler, authManager, authMiddlewareOptions)
 
 	// Start server
-	slog.Info("Starting server on :8080")
-	if err := r.Run(":8080"); err != nil {
+	listenAddr := fmt.Sprintf(":%d", cfg.Server.Port)
+	slog.Info("starting server", "addr", listenAddr, "version", "v"+version.Get())
+	if err := r.Run(listenAddr); err != nil {
 		slog.Error("failed to start server", "err", err)
 		os.Exit(1)
 	}

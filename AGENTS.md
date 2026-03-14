@@ -11,6 +11,7 @@ GoSvelteKit is a template/base project with a Golang backend and SvelteKit (Svel
 - **API Docs**: Swaggo
 - **Logging**: slog (log/slog)
 - **Config**: Viper com padrão env-first e fallback para `backend/configs/app.yml`
+- **Versioning**: versão centralizada no arquivo raiz `VERSION`
 
 ### Config Loading Pattern
 
@@ -46,6 +47,7 @@ internal/auth/
 - **Icons**: @lucide/svelte (Svelte 5)
 - **Mode**: Dark mode only
 - Always use Svelte 5 with the new runes API (`$state`, `$derived`, `$props`)
+- A versão exibida no footer deve vir da versão central do projeto
 
 ### Auth Store
 
@@ -77,10 +79,14 @@ interface User {
 ## Development Workflow
 
 - Monorepo with `backend/` and `frontend/` directories
-- Dev requires running both servers: `go run cmd/server/server.go` and `bun run dev`
+- Dev requires running both servers: `cd backend && go run main.go` and `cd frontend && bun run dev`
 - Follow Conventional Commits for commit messages
+- Ao alterar a versão do projeto, atualizar apenas o arquivo raiz `VERSION`
 
 ## Deployment
 
 - Docker containers for deployment
 - Environment variables for configuration
+- Imagens devem ser versionadas a partir de `VERSION`
+- O script padrão para build das imagens é `./scripts/build-images.sh`
+- O script usa `podman` por padrão e aceita `CONTAINER_CLI=docker`
